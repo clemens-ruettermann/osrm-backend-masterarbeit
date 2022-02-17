@@ -23,6 +23,8 @@ class CellCustomizer
         bool from_clique;
         EdgeDuration duration;
         EdgeDistance distance;
+		EdgeDrivingFactor driving_factor;
+		EdgeResistanceFactor resistance_factor;
     };
 
   public:
@@ -70,6 +72,8 @@ class CellCustomizer
                 const EdgeWeight weight = heap.GetKey(node);
                 const EdgeDuration duration = heap.GetData(node).duration;
                 const EdgeDistance distance = heap.GetData(node).distance;
+				const EdgeDrivingFactor driving_factor = heap.GetData(node).driving_factor;
+				const EdgeResistanceFactor resistance_factor = heap.GetData(node).resistance_factor;
 
                 RelaxNode(graph,
                           cells,
@@ -80,7 +84,9 @@ class CellCustomizer
                           node,
                           weight,
                           duration,
-                          distance);
+                          distance,
+						  driving_factor,
+						  resistance_factor);
 
                 destinations_set.erase(node);
             }
@@ -89,26 +95,34 @@ class CellCustomizer
             auto weights = cell.GetOutWeight(source);
             auto durations = cell.GetOutDuration(source);
             auto distances = cell.GetOutDistance(source);
+			auto driving_factors = cell.GetOutDrivingFactor(source);
+			auto resistance_factors = cell.GetOutResistanceFactor(source);
             for (auto &destination : destinations)
             {
                 BOOST_ASSERT(!weights.empty());
                 BOOST_ASSERT(!durations.empty());
                 BOOST_ASSERT(!distances.empty());
+                BOOST_ASSERT(!driving_factors.empty());
+                BOOST_ASSERT(!resistance_factors.empty());
 
                 const bool inserted = heap.WasInserted(destination);
                 weights.front() = inserted ? heap.GetKey(destination) : INVALID_EDGE_WEIGHT;
-                durations.front() =
-                    inserted ? heap.GetData(destination).duration : MAXIMAL_EDGE_DURATION;
-                distances.front() =
-                    inserted ? heap.GetData(destination).distance : INVALID_EDGE_DISTANCE;
+                durations.front() = inserted ? heap.GetData(destination).duration : MAXIMAL_EDGE_DURATION;
+                distances.front() = inserted ? heap.GetData(destination).distance : INVALID_EDGE_DISTANCE;
+				driving_factors.front() = inserted ? heap.GetData(destination).driving_factor : INVALID_EDGE_DRIVING_FACTOR;
+				resistance_factors.front() = inserted ? heap.GetData(destination).resistance_factor : INVALID_EDGE_RESISTANCE_FACTOR;
 
                 weights.advance_begin(1);
                 durations.advance_begin(1);
                 distances.advance_begin(1);
+				driving_factors.advance_begin(1);
+				resistance_factors.advance_begin(1);
             }
             BOOST_ASSERT(weights.empty());
             BOOST_ASSERT(durations.empty());
             BOOST_ASSERT(distances.empty());
+            BOOST_ASSERT(driving_factors.empty());
+            BOOST_ASSERT(resistance_factors.empty());
         }
     }
 
@@ -146,7 +160,9 @@ class CellCustomizer
                    NodeID node,
                    EdgeWeight weight,
                    EdgeDuration duration,
-                   EdgeDistance distance) const
+                   EdgeDistance distance,
+				   EdgeDrivingFactor driving_factor,
+				   EdgeResistanceFactor resistance_factor) const
     {
         auto first_level = level == 1;
         BOOST_ASSERT(heap.WasInserted(node));
@@ -168,6 +184,8 @@ class CellCustomizer
                 auto subcell_destination = subcell.GetDestinationNodes().begin();
                 auto subcell_duration = subcell.GetOutDuration(node).begin();
                 auto subcell_distance = subcell.GetOutDistance(node).begin();
+				auto subcell_driving_factor = subcell.GetOutDrivingFactor(node).begin();
+				auto subcell_resistance_factor = subcell.GetOutResistanceFactor(node).begin();
                 for (auto subcell_weight : subcell.GetOutWeight(node))
                 {
                     if (subcell_weight != INVALID_EDGE_WEIGHT)
@@ -181,23 +199,29 @@ class CellCustomizer
                         const EdgeWeight to_weight = weight + subcell_weight;
                         const EdgeDuration to_duration = duration + *subcell_duration;
                         const EdgeDistance to_distance = distance + *subcell_distance;
+						const EdgeDrivingFactor to_driving_factor = driving_factor + *subcell_driving_factor;
+                        const EdgeResistanceFactor to_resistance_factor = resistance_factor + *subcell_resistance_factor;
                         if (!heap.WasInserted(to))
                         {
-                            heap.Insert(to, to_weight, {true, to_duration, to_distance});
+                            heap.Insert(to, to_weight, {true, to_duration, to_distance, to_driving_factor, to_resistance_factor});
                         }
-                        else if (std::tie(to_weight, to_duration, to_distance) <
+                        else if (std::tie(to_weight, to_duration, to_distance, to_driving_factor, to_resistance_factor) <
                                  std::tie(heap.GetKey(to),
                                           heap.GetData(to).duration,
-                                          heap.GetData(to).distance))
+                                          heap.GetData(to).distance,
+										  heap.GetData(to).driving_factor,
+										  heap.GetData(to).resistance_factor))
                         {
                             heap.DecreaseKey(to, to_weight);
-                            heap.GetData(to) = {true, to_duration, to_distance};
+                            heap.GetData(to) = {true, to_duration, to_distance, to_driving_factor, to_resistance_factor};
                         }
                     }
 
                     ++subcell_destination;
                     ++subcell_duration;
                     ++subcell_distance;
+					++subcell_driving_factor;
+					++subcell_resistance_factor;
                 }
             }
         }
@@ -218,17 +242,19 @@ class CellCustomizer
                 const EdgeWeight to_weight = weight + data.weight;
                 const EdgeDuration to_duration = duration + data.duration;
                 const EdgeDistance to_distance = distance + data.distance;
+				const EdgeDrivingFactor to_driving_factor = driving_factor + data.driving_factor;
+				const EdgeResistanceFactor to_resistance_factor = resistance_factor + data.resistance_factor;
                 if (!heap.WasInserted(to))
                 {
                     heap.Insert(
-                        to, to_weight, {false, duration + data.duration, distance + data.distance});
+                        to, to_weight, {false, duration + data.duration, distance + data.distance, driving_factor + data.driving_factor, resistance_factor + data.resistance_factor});
                 }
-                else if (std::tie(to_weight, to_duration, to_distance) <
+                else if (std::tie(to_weight, to_duration, to_distance, to_driving_factor, to_resistance_factor) <
                          std::tie(
-                             heap.GetKey(to), heap.GetData(to).duration, heap.GetData(to).distance))
+                             heap.GetKey(to), heap.GetData(to).duration, heap.GetData(to).distance, heap.GetData(to).driving_factor, heap.GetData(to).resistance_factor))
                 {
                     heap.DecreaseKey(to, to_weight);
-                    heap.GetData(to) = {false, to_duration, to_distance};
+                    heap.GetData(to) = {false, to_duration, to_distance, to_driving_factor, to_resistance_factor};
                 }
             }
         }

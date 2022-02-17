@@ -112,6 +112,16 @@ void EdgeBasedGraphFactory::GetEdgeBasedNodeDistances(
     swap(m_edge_based_node_distances, output_node_distances);
 }
 
+void EdgeBasedGraphFactory::GetEdgeBasedNodeDrivingFactors(std::vector<EdgeDrivingFactor> &output_node_driving_factors)
+{
+	std::swap(m_edge_based_node_driving_factor, output_node_driving_factors);
+}
+
+void EdgeBasedGraphFactory::GetEdgeBasedNodeResistanceFactors(std::vector<EdgeDrivingFactor> &output_node_resistance_factors)
+{
+	std::swap(m_edge_based_node_resistance_factor, output_node_resistance_factors);
+}
+
 std::uint32_t EdgeBasedGraphFactory::GetConnectivityChecksum() const
 {
     return m_connectivity_checksum;
@@ -290,10 +300,10 @@ unsigned EdgeBasedGraphFactory::LabelEdgeBasedNodes()
     // (edge-based nodes)
     constexpr std::size_t ESTIMATED_EDGE_COUNT = 4;
     m_edge_based_node_weights.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
-    m_edge_based_node_durations.reserve(ESTIMATED_EDGE_COUNT *
-                                        m_node_based_graph.GetNumberOfNodes());
-    m_edge_based_node_distances.reserve(ESTIMATED_EDGE_COUNT *
-                                        m_node_based_graph.GetNumberOfNodes());
+    m_edge_based_node_durations.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
+    m_edge_based_node_distances.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
+	m_edge_based_node_driving_factor.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
+	m_edge_based_node_resistance_factor.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
     nbe_to_ebn_mapping.resize(m_node_based_graph.GetEdgeCapacity(), SPECIAL_NODEID);
 
     // renumber edge based node of outgoing edges
@@ -311,7 +321,9 @@ unsigned EdgeBasedGraphFactory::LabelEdgeBasedNodes()
 
             m_edge_based_node_weights.push_back(edge_data.weight);
             m_edge_based_node_durations.push_back(edge_data.duration);
-            m_edge_based_node_distances.push_back(edge_data.distance);
+	        m_edge_based_node_distances.push_back(edge_data.distance);
+			m_edge_based_node_driving_factor.push_back(edge_data.driving_factor);
+			m_edge_based_node_resistance_factor.push_back(edge_data.resistance_factor);
 
             BOOST_ASSERT(numbered_edges_count < m_node_based_graph.GetNumberOfEdges());
             nbe_to_ebn_mapping[current_edge] = numbered_edges_count;
@@ -407,10 +419,10 @@ EdgeBasedGraphFactory::GenerateEdgeExpandedNodes(const WayRestrictionMap &way_re
             const auto ebn_weight = m_edge_based_node_weights[nbe_to_ebn_mapping[eid]];
             BOOST_ASSERT((ebn_weight & 0x7fffffff) == edge_data.weight);
             m_edge_based_node_weights.push_back(ebn_weight);
-            m_edge_based_node_durations.push_back(
-                m_edge_based_node_durations[nbe_to_ebn_mapping[eid]]);
-            m_edge_based_node_distances.push_back(
-                m_edge_based_node_distances[nbe_to_ebn_mapping[eid]]);
+            m_edge_based_node_durations.push_back(m_edge_based_node_durations[nbe_to_ebn_mapping[eid]]);
+            m_edge_based_node_distances.push_back(m_edge_based_node_distances[nbe_to_ebn_mapping[eid]]);
+			m_edge_based_node_driving_factor.push_back(m_edge_based_node_driving_factor[nbe_to_ebn_mapping[eid]]);
+	        m_edge_based_node_resistance_factor.push_back(m_edge_based_node_resistance_factor[nbe_to_ebn_mapping[eid]]);
 
             // Include duplicate nodes in cnbg to ebg mapping. This means a
             // compressed node pair (u,v) can appear multiple times in this list.
@@ -427,6 +439,8 @@ EdgeBasedGraphFactory::GenerateEdgeExpandedNodes(const WayRestrictionMap &way_re
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_weights.size());
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_durations.size());
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_distances.size());
+    BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_driving_factor.size());
+    BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_resistance_factor.size());
 
     util::Log() << "Generated " << m_number_of_edge_based_nodes << " nodes ("
                 << way_restriction_map.NumberOfDuplicatedNodes()
@@ -631,6 +645,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
             auto weight = boost::numeric_cast<EdgeWeight>(edge_data1.weight + weight_penalty);
             auto duration = boost::numeric_cast<EdgeWeight>(edge_data1.duration + duration_penalty);
             auto distance = boost::numeric_cast<EdgeDistance>(edge_data1.distance);
+            auto driving_factor = boost::numeric_cast<EdgeDrivingFactor>(edge_data1.driving_factor);
+            auto resistance_factor = boost::numeric_cast<EdgeResistanceFactor>(edge_data1.resistance_factor);
 
             EdgeBasedEdge edge_based_edge = {edge_based_node_from,
                                              edge_based_node_to,
@@ -639,6 +655,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                              weight,
                                              duration,
                                              distance,
+											 driving_factor,
+											 resistance_factor,
                                              true,
                                              false};
 
@@ -681,10 +699,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 {
                     // We capture the thread-local work in these objects, then flush them in a
                     // controlled manner at the end of the parallel range
-                    const auto &incoming_edges =
-                        intersection::getIncomingEdges(m_node_based_graph, intersection_node);
-                    const auto &outgoing_edges =
-                        intersection::getOutgoingEdges(m_node_based_graph, intersection_node);
+                    const auto &incoming_edges = intersection::getIncomingEdges(m_node_based_graph, intersection_node);
+                    const auto &outgoing_edges = intersection::getOutgoingEdges(m_node_based_graph, intersection_node);
 
                     intersection::IntersectionEdgeGeometries edge_geometries;
                     std::unordered_set<EdgeID> merged_edge_ids;
@@ -786,10 +802,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                         intersection_node);
                                     if (reversed_edge != SPECIAL_EDGEID)
                                     {
-                                        const auto &reversed_edge_data =
-                                            m_node_based_graph.GetEdgeData(reversed_edge);
-
-                                        if (!reversed_edge_data.reversed)
+                                        if (!m_node_based_graph.GetEdgeData(reversed_edge).reversed)
                                         {
                                             is_incoming = true;
                                         }
@@ -891,8 +904,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
                             /***************************/
 
-                            const auto outgoing_edge_target =
-                                m_node_based_graph.GetTarget(outgoing_edge.edge);
+                            const auto outgoing_edge_target = m_node_based_graph.GetTarget(outgoing_edge.edge);
 
                             // TODO: this loop is not optimized - once we have a few
                             //       overrides available, we should index this for faster
@@ -905,11 +917,9 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                         turn.via == intersection_node &&
                                         turn.to == outgoing_edge_target)
                                     {
-                                        const auto &ebn_from =
-                                            nbe_to_ebn_mapping[incoming_edge.edge];
+                                        const auto &ebn_from = nbe_to_ebn_mapping[incoming_edge.edge];
                                         const auto &ebn_to = target_id;
-                                        buffer->turn_to_ebn_map[turn] =
-                                            std::make_pair(ebn_from, ebn_to);
+                                        buffer->turn_to_ebn_map[turn] = std::make_pair(ebn_from, ebn_to);
                                     }
                                 }
                             }
@@ -965,17 +975,14 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                way_restriction_map.NumberOfDuplicatedNodes() +
                                                duplicated_node_id);
 
-                                    auto const node_at_end_of_turn =
-                                        m_node_based_graph.GetTarget(outgoing_edge.edge);
+                                    auto const node_at_end_of_turn = m_node_based_graph.GetTarget(outgoing_edge.edge);
 
-                                    const auto is_restricted = way_restriction_map.IsRestricted(
-                                        duplicated_node_id, node_at_end_of_turn);
+                                    const auto is_restricted = way_restriction_map.IsRestricted(duplicated_node_id, node_at_end_of_turn);
 
                                     if (is_restricted)
                                     {
                                         auto const &restrictions =
-                                            way_restriction_map.GetRestrictions(
-                                                duplicated_node_id, node_at_end_of_turn);
+                                            way_restriction_map.GetRestrictions(duplicated_node_id, node_at_end_of_turn);
 
                                         auto const has_unconditional =
                                             std::any_of(restrictions.begin(),

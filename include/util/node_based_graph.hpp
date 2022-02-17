@@ -22,7 +22,7 @@ struct NodeBasedEdgeData
 {
     NodeBasedEdgeData()
         : weight(INVALID_EDGE_WEIGHT), duration(INVALID_EDGE_WEIGHT),
-          distance(INVALID_EDGE_DISTANCE), geometry_id({0, false}), reversed(false),
+          distance(INVALID_EDGE_DISTANCE), driving_factor(0), resistance_factor(0), geometry_id({0, false}), reversed(false),
           annotation_data(-1)
     {
     }
@@ -30,11 +30,13 @@ struct NodeBasedEdgeData
     NodeBasedEdgeData(EdgeWeight weight,
                       EdgeWeight duration,
                       EdgeDistance distance,
+                      double driving_factor,
+                      double resistance_factor,
                       GeometryID geometry_id,
                       bool reversed,
                       extractor::NodeBasedEdgeClassification flags,
                       AnnotationID annotation_data)
-        : weight(weight), duration(duration), distance(distance), geometry_id(geometry_id),
+        : weight(weight), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor), geometry_id(geometry_id),
           reversed(reversed), flags(flags), annotation_data(annotation_data)
     {
     }
@@ -42,6 +44,8 @@ struct NodeBasedEdgeData
     EdgeWeight weight;
     EdgeWeight duration;
     EdgeDistance distance;
+	double driving_factor;
+	double resistance_factor;
     GeometryID geometry_id;
     bool reversed : 1;
     extractor::NodeBasedEdgeClassification flags;
@@ -85,12 +89,22 @@ NodeBasedDynamicGraphFromEdges(NodeID number_of_nodes,
             output_edge.data.weight = input_edge.weight;
             output_edge.data.duration = input_edge.duration;
             output_edge.data.distance = input_edge.distance;
+			output_edge.data.driving_factor = input_edge.driving_factor;
+			output_edge.data.resistance_factor = input_edge.resistance_factor;
             output_edge.data.flags = input_edge.flags;
             output_edge.data.annotation_data = input_edge.annotation_data;
 
             BOOST_ASSERT(output_edge.data.weight > 0);
             BOOST_ASSERT(output_edge.data.duration > 0);
+			if (output_edge.data.distance < 0 ) {
+				std::cerr << output_edge.data.distance << std::endl;
+			}
             BOOST_ASSERT(output_edge.data.distance >= 0);
+	        // Consumption can be negative so we do not need to assert > 0.
+			// But in case we force non-zero consumptions, we need to assert this
+#ifdef NON_ZERO_CONSUMPTION
+	        BOOST_ASSERT(output_edge.data.consumption != 0);
+#endif
         });
 
     tbb::parallel_sort(edges_list.begin(), edges_list.end());

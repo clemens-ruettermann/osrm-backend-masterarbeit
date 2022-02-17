@@ -48,11 +48,24 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
     const double weight_multiplier = facade.GetWeightMultiplier();
 
     const double constexpr ZERO_DURATION = 0., ZERO_DISTANCE = 0., ZERO_WEIGHT = 0;
+	const std::int32_t constexpr ZERO_CONSUMPTION = 0;
     const constexpr char *NO_ROTARY_NAME = "";
-    const EdgeWeight source_weight =
-        source_traversed_in_reverse ? source_node.reverse_weight : source_node.forward_weight;
-    const EdgeWeight source_duration =
-        source_traversed_in_reverse ? source_node.reverse_duration : source_node.forward_duration;
+
+    EdgeWeight source_weight;
+	EdgeDuration source_duration;
+	EdgeDrivingFactor source_driving_factor;
+	EdgeResistanceFactor source_resistance_factor;
+	if (source_traversed_in_reverse) {
+		source_weight = source_node.reverse_weight;
+		source_duration = source_node.reverse_duration;
+		source_driving_factor = source_node.reverse_driving_factor;
+		source_resistance_factor = source_node.reverse_resistance_factor;
+	} else {
+		source_weight = source_node.forward_weight;
+		source_duration = source_node.forward_duration;
+		source_driving_factor = source_node.forward_driving_factor;
+		source_resistance_factor = source_node.forward_resistance_factor;
+	}
     const auto source_node_id = source_traversed_in_reverse ? source_node.reverse_segment_id.id
                                                             : source_node.forward_segment_id.id;
     const auto source_name_id = facade.GetNameIndex(source_node_id);
@@ -60,10 +73,22 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
     const auto source_mode = facade.GetTravelMode(source_node_id);
     auto source_classes = facade.GetClasses(facade.GetClassData(source_node_id));
 
-    const EdgeWeight target_duration =
-        target_traversed_in_reverse ? target_node.reverse_duration : target_node.forward_duration;
-    const EdgeWeight target_weight =
-        target_traversed_in_reverse ? target_node.reverse_weight : target_node.forward_weight;
+	EdgeWeight target_weight;
+	EdgeDuration target_duration;
+	EdgeDrivingFactor target_driving_factor;
+	EdgeResistanceFactor target_resistance_factor;
+	if (target_traversed_in_reverse) {
+		target_weight = target_node.reverse_weight;
+		target_duration = target_node.reverse_duration;
+		target_driving_factor = target_node.reverse_driving_factor;
+		target_resistance_factor = target_node.reverse_resistance_factor;
+	} else {
+		target_weight = target_node.forward_weight;
+		target_duration = target_node.forward_duration;
+		target_driving_factor = target_node.forward_driving_factor;
+		target_resistance_factor = target_node.forward_resistance_factor;
+	}
+
     const auto target_node_id = target_traversed_in_reverse ? target_node.reverse_segment_id.id
                                                             : target_node.forward_segment_id.id;
     const auto target_name_id = facade.GetNameIndex(target_node_id);
@@ -104,6 +129,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
         // initial start of a route
         EdgeWeight segment_duration = 0;
         EdgeWeight segment_weight = 0;
+		EdgeDrivingFactor segment_driving_factor = 0;
+		EdgeResistanceFactor segment_resistance_factor = 0;
 
         // some name changes are not announced in our processing. For these, we have to keep the
         // first name on the segment
@@ -113,6 +140,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
             const auto &path_point = leg_data[leg_data_index];
             segment_duration += path_point.duration_until_turn;
             segment_weight += path_point.weight_until_turn;
+			segment_driving_factor += path_point.driving_factor_until_turn;
+			segment_resistance_factor += path_point.resistance_factor_until_turn;
 
             // all changes to this check have to be matched with assemble_geometry
             if (path_point.turn_instruction.type != osrm::guidance::TurnType::NoTurn)
@@ -140,6 +169,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
                                           segment_duration / 10.,
                                           distance,
                                           segment_weight / weight_multiplier,
+                                          segment_driving_factor,
+										  segment_resistance_factor,
                                           path_point.travel_mode,
                                           maneuver,
                                           leg_geometry.FrontIndex(segment_index),
@@ -206,7 +237,9 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
         }
         const auto distance = leg_geometry.segment_distances[segment_index];
         const EdgeWeight duration = segment_duration + target_duration;
-        const EdgeWeight weight = segment_weight + target_weight;
+        const EdgeDuration weight = segment_weight + target_weight;
+		const EdgeDrivingFactor driving_factor = segment_driving_factor + target_driving_factor;
+		const EdgeResistanceFactor resistance_factor = segment_resistance_factor + target_resistance_factor;
         // intersections contain the classes of exiting road
         intersection.classes = facade.GetClasses(facade.GetClassData(target_node_id));
         BOOST_ASSERT(duration >= 0);
@@ -223,6 +256,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
                                   duration / 10.,
                                   distance,
                                   weight / weight_multiplier,
+								  driving_factor,
+								  resistance_factor,
                                   target_mode,
                                   maneuver,
                                   leg_geometry.FrontIndex(segment_index),
@@ -250,6 +285,9 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
         BOOST_ASSERT(target_weight >= source_weight);
         const EdgeWeight weight = target_weight - source_weight;
 
+		const EdgeDrivingFactor driving_factor = target_driving_factor - source_driving_factor;
+		const EdgeResistanceFactor resistance_factor = target_resistance_factor - source_resistance_factor;
+
         // use rectified linear unit function to avoid negative duration values
         // due to flooring errors in phantom snapping
         BOOST_ASSERT(target_duration >= source_duration || weight == 0);
@@ -268,6 +306,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
                                   duration / 10.,
                                   leg_geometry.segment_distances[segment_index],
                                   weight / weight_multiplier,
+								  driving_factor,
+								  resistance_factor,
                                   source_mode,
                                   std::move(maneuver),
                                   leg_geometry.FrontIndex(segment_index),
@@ -311,6 +351,8 @@ inline std::vector<RouteStep> assembleSteps(const datafacade::BaseDataFacade &fa
                               ZERO_DURATION,
                               ZERO_DISTANCE,
                               ZERO_WEIGHT,
+							  0,
+							  0,
                               target_mode,
                               std::move(maneuver),
                               leg_geometry.locations.size() - 1,

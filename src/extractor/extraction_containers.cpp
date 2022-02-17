@@ -13,6 +13,7 @@
 #include "util/for_each_indexed.hpp"
 #include "util/log.hpp"
 #include "util/timing_util.hpp"
+#include "util/consumption_utils.hpp"
 
 #include <boost/assert.hpp>
 #include <boost/numeric/conversion/cast.hpp>
@@ -22,7 +23,9 @@
 #include <chrono>
 #include <limits>
 #include <mutex>
+#include <random>
 #include <sstream>
+#include <gdal_priv.h>
 
 namespace
 {
@@ -185,6 +188,7 @@ ExtractionContainers::ExtractionContainers()
  */
 void ExtractionContainers::PrepareData(ScriptingEnvironment &scripting_environment,
                                        const std::string &osrm_path,
+                                       const std::string &elevation_path,
                                        const std::string &name_file_name)
 {
     storage::tar::FileWriter writer(osrm_path, storage::tar::FileWriter::GenerateFingerprint);
@@ -194,7 +198,7 @@ void ExtractionContainers::PrepareData(ScriptingEnvironment &scripting_environme
 
     PrepareNodes();
     WriteNodes(writer);
-    PrepareEdges(scripting_environment);
+    PrepareEdges(scripting_environment, elevation_path);
     all_nodes_list.clear(); // free all_nodes_list before allocation of normal_edges
     all_nodes_list.shrink_to_fit();
     WriteEdges(writer);
@@ -208,7 +212,7 @@ void ExtractionContainers::PrepareData(ScriptingEnvironment &scripting_environme
 void ExtractionContainers::WriteCharData(const std::string &file_name)
 {
     util::UnbufferedLog log;
-    log << "writing street name index ... ";
+    log << "writing street name index                               ... ";
     TIMER_START(write_index);
 
     files::writeNames(file_name,
@@ -223,7 +227,7 @@ void ExtractionContainers::PrepareNodes()
 {
     {
         util::UnbufferedLog log;
-        log << "Sorting used nodes        ... " << std::flush;
+        log << "Sorting used nodes                                      ... " << std::flush;
         TIMER_START(sorting_used_nodes);
         tbb::parallel_sort(used_node_id_list.begin(), used_node_id_list.end());
         TIMER_STOP(sorting_used_nodes);
@@ -232,7 +236,7 @@ void ExtractionContainers::PrepareNodes()
 
     {
         util::UnbufferedLog log;
-        log << "Erasing duplicate nodes   ... " << std::flush;
+        log << "Erasing duplicate nodes                                 ... " << std::flush;
         TIMER_START(erasing_dups);
         auto new_end = std::unique(used_node_id_list.begin(), used_node_id_list.end());
         used_node_id_list.resize(new_end - used_node_id_list.begin());
@@ -242,7 +246,7 @@ void ExtractionContainers::PrepareNodes()
 
     {
         util::UnbufferedLog log;
-        log << "Sorting all nodes         ... " << std::flush;
+        log << "Sorting all nodes                                       ... " << std::flush;
         TIMER_START(sorting_nodes);
         tbb::parallel_sort(
             all_nodes_list.begin(), all_nodes_list.end(), [](const auto &left, const auto &right) {
@@ -251,10 +255,9 @@ void ExtractionContainers::PrepareNodes()
         TIMER_STOP(sorting_nodes);
         log << "ok, after " << TIMER_SEC(sorting_nodes) << "s";
     }
-
-    {
+	{
         util::UnbufferedLog log;
-        log << "Building node id map      ... " << std::flush;
+        log << "Building node id map                                    ... " << std::flush;
         TIMER_START(id_map);
         auto node_iter = all_nodes_list.begin();
         auto ref_iter = used_node_id_list.begin();
@@ -276,7 +279,7 @@ void ExtractionContainers::PrepareNodes()
                 continue;
             }
             BOOST_ASSERT(node_iter->node_id == *ref_iter);
-            *used_nodes_iter = std::move(*ref_iter);
+            *used_nodes_iter = *ref_iter;
             used_nodes_iter++;
             node_iter++;
             ref_iter++;
@@ -296,303 +299,21 @@ void ExtractionContainers::PrepareNodes()
     }
 }
 
-void ExtractionContainers::PrepareEdges(ScriptingEnvironment &scripting_environment)
-{
-    // Sort edges by start.
-    {
-        util::UnbufferedLog log;
-        log << "Sorting edges by start    ... " << std::flush;
-        TIMER_START(sort_edges_by_start);
-        tbb::parallel_sort(all_edges_list.begin(), all_edges_list.end(), CmpEdgeByOSMStartID());
-        TIMER_STOP(sort_edges_by_start);
-        log << "ok, after " << TIMER_SEC(sort_edges_by_start) << "s";
-    }
-
-    {
-        util::UnbufferedLog log;
-        log << "Setting start coords      ... " << std::flush;
-        TIMER_START(set_start_coords);
-        // Traverse list of edges and nodes in parallel and set start coord
-        auto node_iterator = all_nodes_list.begin();
-        auto edge_iterator = all_edges_list.begin();
-
-        const auto all_edges_list_end = all_edges_list.end();
-        const auto all_nodes_list_end = all_nodes_list.end();
-
-        while (edge_iterator != all_edges_list_end && node_iterator != all_nodes_list_end)
-        {
-            if (edge_iterator->result.osm_source_id < node_iterator->node_id)
-            {
-                util::Log(logDEBUG)
-                    << "Found invalid node reference " << edge_iterator->result.source;
-                edge_iterator->result.source = SPECIAL_NODEID;
-                ++edge_iterator;
-                continue;
-            }
-            if (edge_iterator->result.osm_source_id > node_iterator->node_id)
-            {
-                node_iterator++;
-                continue;
-            }
-
-            // remove loops
-            if (edge_iterator->result.osm_source_id == edge_iterator->result.osm_target_id)
-            {
-                edge_iterator->result.source = SPECIAL_NODEID;
-                edge_iterator->result.target = SPECIAL_NODEID;
-                ++edge_iterator;
-                continue;
-            }
-
-            BOOST_ASSERT(edge_iterator->result.osm_source_id == node_iterator->node_id);
-
-            // assign new node id
-            const auto node_id = mapExternalToInternalNodeID(
-                used_node_id_list.begin(), used_node_id_list.end(), node_iterator->node_id);
-            BOOST_ASSERT(node_id != SPECIAL_NODEID);
-            edge_iterator->result.source = node_id;
-
-            edge_iterator->source_coordinate.lat = node_iterator->lat;
-            edge_iterator->source_coordinate.lon = node_iterator->lon;
-            ++edge_iterator;
-        }
-
-        // Remove all remaining edges. They are invalid because there are no corresponding nodes for
-        // them. This happens when using osmosis with bbox or polygon to extract smaller areas.
-        auto markSourcesInvalid = [](InternalExtractorEdge &edge) {
-            util::Log(logDEBUG) << "Found invalid node reference " << edge.result.source;
-            edge.result.source = SPECIAL_NODEID;
-            edge.result.osm_source_id = SPECIAL_OSM_NODEID;
-        };
-        std::for_each(edge_iterator, all_edges_list_end, markSourcesInvalid);
-        TIMER_STOP(set_start_coords);
-        log << "ok, after " << TIMER_SEC(set_start_coords) << "s";
-    }
-
-    {
-        // Sort Edges by target
-        util::UnbufferedLog log;
-        log << "Sorting edges by target   ... " << std::flush;
-        TIMER_START(sort_edges_by_target);
-        tbb::parallel_sort(all_edges_list.begin(), all_edges_list.end(), CmpEdgeByOSMTargetID());
-        TIMER_STOP(sort_edges_by_target);
-        log << "ok, after " << TIMER_SEC(sort_edges_by_target) << "s";
-    }
-
-    {
-        // Compute edge weights
-        util::UnbufferedLog log;
-        log << "Computing edge weights    ... " << std::flush;
-        TIMER_START(compute_weights);
-        auto node_iterator = all_nodes_list.begin();
-        auto edge_iterator = all_edges_list.begin();
-        const auto all_edges_list_end_ = all_edges_list.end();
-        const auto all_nodes_list_end_ = all_nodes_list.end();
-
-        const auto weight_multiplier =
-            scripting_environment.GetProfileProperties().GetWeightMultiplier();
-
-        while (edge_iterator != all_edges_list_end_ && node_iterator != all_nodes_list_end_)
-        {
-            // skip all invalid edges
-            if (edge_iterator->result.source == SPECIAL_NODEID)
-            {
-                ++edge_iterator;
-                continue;
-            }
-
-            if (edge_iterator->result.osm_target_id < node_iterator->node_id)
-            {
-                util::Log(logDEBUG) << "Found invalid node reference "
-                                    << static_cast<uint64_t>(edge_iterator->result.osm_target_id);
-                edge_iterator->result.target = SPECIAL_NODEID;
-                ++edge_iterator;
-                continue;
-            }
-            if (edge_iterator->result.osm_target_id > node_iterator->node_id)
-            {
-                ++node_iterator;
-                continue;
-            }
-
-            BOOST_ASSERT(edge_iterator->result.osm_target_id == node_iterator->node_id);
-            BOOST_ASSERT(edge_iterator->source_coordinate.lat !=
-                         util::FixedLatitude{std::numeric_limits<std::int32_t>::min()});
-            BOOST_ASSERT(edge_iterator->source_coordinate.lon !=
-                         util::FixedLongitude{std::numeric_limits<std::int32_t>::min()});
-
-            util::Coordinate source_coord(edge_iterator->source_coordinate);
-            util::Coordinate target_coord{node_iterator->lon, node_iterator->lat};
-
-            // flip source and target coordinates if segment is in backward direction only
-            if (!edge_iterator->result.flags.forward && edge_iterator->result.flags.backward)
-                std::swap(source_coord, target_coord);
-
-            const auto distance =
-                util::coordinate_calculation::greatCircleDistance(source_coord, target_coord);
-            const auto weight = edge_iterator->weight_data(distance);
-            const auto duration = edge_iterator->duration_data(distance);
-
-            const auto accurate_distance =
-                util::coordinate_calculation::fccApproximateDistance(source_coord, target_coord);
-
-            ExtractionSegment segment(source_coord, target_coord, distance, weight, duration);
-            scripting_environment.ProcessSegment(segment);
-
-            auto &edge = edge_iterator->result;
-            edge.weight = std::max<EdgeWeight>(1, std::round(segment.weight * weight_multiplier));
-            edge.duration = std::max<EdgeWeight>(1, std::round(segment.duration * 10.));
-            edge.distance = accurate_distance;
-
-            // assign new node id
-            const auto node_id = mapExternalToInternalNodeID(
-                used_node_id_list.begin(), used_node_id_list.end(), node_iterator->node_id);
-            BOOST_ASSERT(node_id != SPECIAL_NODEID);
-            edge.target = node_id;
-
-            // orient edges consistently: source id < target id
-            // important for multi-edge removal
-            if (edge.source > edge.target)
-            {
-                std::swap(edge.source, edge.target);
-
-                // std::swap does not work with bit-fields
-                bool temp = edge.flags.forward;
-                edge.flags.forward = edge.flags.backward;
-                edge.flags.backward = temp;
-            }
-            ++edge_iterator;
-        }
-
-        // Remove all remaining edges. They are invalid because there are no corresponding nodes for
-        // them. This happens when using osmosis with bbox or polygon to extract smaller areas.
-        auto markTargetsInvalid = [](InternalExtractorEdge &edge) {
-            util::Log(logDEBUG) << "Found invalid node reference " << edge.result.target;
-            edge.result.target = SPECIAL_NODEID;
-        };
-        std::for_each(edge_iterator, all_edges_list_end_, markTargetsInvalid);
-        TIMER_STOP(compute_weights);
-        log << "ok, after " << TIMER_SEC(compute_weights) << "s";
-    }
-
-    // Sort edges by start.
-    {
-        util::UnbufferedLog log;
-        log << "Sorting edges by renumbered start ... ";
-        TIMER_START(sort_edges_by_renumbered_start);
-        tbb::parallel_sort(all_edges_list.begin(),
-                           all_edges_list.end(),
-                           CmpEdgeByInternalSourceTargetAndName{
-                               all_edges_annotation_data_list, name_char_data, name_offsets});
-        TIMER_STOP(sort_edges_by_renumbered_start);
-        log << "ok, after " << TIMER_SEC(sort_edges_by_renumbered_start) << "s";
-    }
-
-    BOOST_ASSERT(all_edges_list.size() > 0);
-    for (std::size_t i = 0; i < all_edges_list.size();)
-    {
-        // only invalid edges left
-        if (all_edges_list[i].result.source == SPECIAL_NODEID)
-        {
-            break;
-        }
-        // skip invalid edges
-        if (all_edges_list[i].result.target == SPECIAL_NODEID)
-        {
-            ++i;
-            continue;
-        }
-
-        std::size_t start_idx = i;
-        NodeID source = all_edges_list[i].result.source;
-        NodeID target = all_edges_list[i].result.target;
-
-        auto min_forward = std::make_pair(std::numeric_limits<EdgeWeight>::max(),
-                                          std::numeric_limits<EdgeWeight>::max());
-        auto min_backward = std::make_pair(std::numeric_limits<EdgeWeight>::max(),
-                                           std::numeric_limits<EdgeWeight>::max());
-        std::size_t min_forward_idx = std::numeric_limits<std::size_t>::max();
-        std::size_t min_backward_idx = std::numeric_limits<std::size_t>::max();
-
-        // find minimal edge in both directions
-        while (i < all_edges_list.size() && all_edges_list[i].result.source == source &&
-               all_edges_list[i].result.target == target)
-        {
-            const auto &result = all_edges_list[i].result;
-            const auto value = std::make_pair(result.weight, result.duration);
-            if (result.flags.forward && value < min_forward)
-            {
-                min_forward_idx = i;
-                min_forward = value;
-            }
-            if (result.flags.backward && value < min_backward)
-            {
-                min_backward_idx = i;
-                min_backward = value;
-            }
-
-            // this also increments the outer loop counter!
-            i++;
-        }
-
-        BOOST_ASSERT(min_forward_idx == std::numeric_limits<std::size_t>::max() ||
-                     min_forward_idx < i);
-        BOOST_ASSERT(min_backward_idx == std::numeric_limits<std::size_t>::max() ||
-                     min_backward_idx < i);
-        BOOST_ASSERT(min_backward_idx != std::numeric_limits<std::size_t>::max() ||
-                     min_forward_idx != std::numeric_limits<std::size_t>::max());
-
-        if (min_backward_idx == min_forward_idx)
-        {
-            all_edges_list[min_forward_idx].result.flags.is_split = false;
-            all_edges_list[min_forward_idx].result.flags.forward = true;
-            all_edges_list[min_forward_idx].result.flags.backward = true;
-        }
-        else
-        {
-            bool has_forward = min_forward_idx != std::numeric_limits<std::size_t>::max();
-            bool has_backward = min_backward_idx != std::numeric_limits<std::size_t>::max();
-            if (has_forward)
-            {
-                all_edges_list[min_forward_idx].result.flags.forward = true;
-                all_edges_list[min_forward_idx].result.flags.backward = false;
-                all_edges_list[min_forward_idx].result.flags.is_split = has_backward;
-            }
-            if (has_backward)
-            {
-                std::swap(all_edges_list[min_backward_idx].result.source,
-                          all_edges_list[min_backward_idx].result.target);
-                all_edges_list[min_backward_idx].result.flags.forward = true;
-                all_edges_list[min_backward_idx].result.flags.backward = false;
-                all_edges_list[min_backward_idx].result.flags.is_split = has_forward;
-            }
-        }
-
-        // invalidate all unused edges
-        for (std::size_t j = start_idx; j < i; j++)
-        {
-            if (j == min_forward_idx || j == min_backward_idx)
-            {
-                continue;
-            }
-            all_edges_list[j].result.source = SPECIAL_NODEID;
-            all_edges_list[j].result.target = SPECIAL_NODEID;
-        }
-    }
-}
-
 void ExtractionContainers::WriteEdges(storage::tar::FileWriter &writer) const
 {
     std::vector<NodeBasedEdge> normal_edges;
     normal_edges.reserve(all_edges_list.size());
     {
         util::UnbufferedLog log;
-        log << "Writing used edges       ... " << std::flush;
+        log << "Writing used edges                                      ... " << std::flush;
         TIMER_START(write_edges);
         // Traverse list of edges and nodes in parallel and set target coord
 
         for (const auto &edge : all_edges_list)
         {
+#ifdef NON_ZERO_CONSUMPTION
+			BOOST_ASSERT(edge.result.consumption != 0);
+#endif
             if (edge.result.source == SPECIAL_NODEID || edge.result.target == SPECIAL_NODEID)
             {
                 continue;
@@ -616,10 +337,339 @@ void ExtractionContainers::WriteEdges(storage::tar::FileWriter &writer) const
     }
 }
 
+	void ExtractionContainers::PrepareEdges(ScriptingEnvironment &scripting_environment, const std::string &elevation_path)
+	{
+		std::vector<OSMNodeID> elevation_id_list;
+		std::vector<float> elevation_value_list;
+		// Load elevation data
+		{
+			util::UnbufferedLog log;
+			log << "Load the elevation data                                 ... " << std::flush;
+			storage::tar::FileReader reader{elevation_path, storage::tar::FileReader::FingerprintFlag::VerifyFingerprint};
+			storage::serialization::read(reader, "/common/elevation/ids", elevation_id_list);
+			storage::serialization::read(reader, "/common/elevation/values", elevation_value_list);
+		}
+		auto elevation_id_iterator = elevation_id_list.begin();
+		auto elevation_value_iterator = elevation_value_list.begin();
+
+		// Sort edges by start.
+		{
+			util::UnbufferedLog log;
+			log << "Sorting edges by start                                  ... " << std::flush;
+			TIMER_START(sort_edges_by_start);
+			tbb::parallel_sort(all_edges_list.begin(), all_edges_list.end(), CmpEdgeByOSMStartID());
+			TIMER_STOP(sort_edges_by_start);
+			log << "ok, after " << TIMER_SEC(sort_edges_by_start) << "s";
+		}
+
+		{
+			util::UnbufferedLog log;
+			log << "Setting start coords                                    ... " << std::flush;
+			TIMER_START(set_start_coords);
+			// Traverse list of edges and nodes in parallel and set start coord
+			auto node_iterator = all_nodes_list.begin();
+			auto edge_iterator = all_edges_list.begin();
+
+			const auto all_edges_list_end = all_edges_list.end();
+			const auto all_nodes_list_end = all_nodes_list.end();
+
+			while (edge_iterator != all_edges_list_end && node_iterator != all_nodes_list_end)
+			{
+				if (edge_iterator->result.osm_source_id < node_iterator->node_id)
+				{
+					util::Log(logDEBUG) << "Found invalid node reference " << edge_iterator->result.source;
+					edge_iterator->result.source = SPECIAL_NODEID;
+					++edge_iterator;
+					continue;
+				}
+				if (edge_iterator->result.osm_source_id > node_iterator->node_id)
+				{
+					node_iterator++;
+					continue;
+				}
+				while (*elevation_id_iterator < node_iterator->node_id) {
+					++elevation_id_iterator;
+					++elevation_value_iterator;
+				}
+
+				// remove loops
+				if (edge_iterator->result.osm_source_id == edge_iterator->result.osm_target_id)
+				{
+					edge_iterator->result.source = SPECIAL_NODEID;
+					edge_iterator->result.target = SPECIAL_NODEID;
+					++edge_iterator;
+					continue;
+				}
+
+				BOOST_ASSERT(edge_iterator->result.osm_source_id == node_iterator->node_id);
+
+				// assign new node id
+				const auto node_id = mapExternalToInternalNodeID(used_node_id_list.begin(), used_node_id_list.end(), node_iterator->node_id);
+				BOOST_ASSERT(node_id != SPECIAL_NODEID);
+				edge_iterator->result.source = node_id;
+
+				edge_iterator->source_coordinate.lat = node_iterator->lat;
+				edge_iterator->source_coordinate.lon = node_iterator->lon;
+				edge_iterator->source_elevation = *elevation_value_iterator;
+
+				++edge_iterator;
+			}
+
+			// Remove all remaining edges. They are invalid because there are no corresponding nodes for
+			// them. This happens when using osmosis with bbox or polygon to extract smaller areas.
+			auto markSourcesInvalid = [](InternalExtractorEdge &edge) {
+				util::Log(logDEBUG) << "Found invalid node reference " << edge.result.source;
+				edge.result.source = SPECIAL_NODEID;
+				edge.result.osm_source_id = SPECIAL_OSM_NODEID;
+			};
+			std::for_each(edge_iterator, all_edges_list_end, markSourcesInvalid);
+			TIMER_STOP(set_start_coords);
+			log << "ok, after " << TIMER_SEC(set_start_coords) << "s";
+		}
+		{
+			// Sort Edges by target
+			util::UnbufferedLog log;
+			log << "Sorting edges by target                                 ... " << std::flush;
+			TIMER_START(sort_edges_by_target);
+			tbb::parallel_sort(all_edges_list.begin(), all_edges_list.end(), CmpEdgeByOSMTargetID());
+			TIMER_STOP(sort_edges_by_target);
+			log << "ok, after " << TIMER_SEC(sort_edges_by_target) << "s";
+		}
+
+		{
+			// Compute edge weights
+			util::UnbufferedLog log;
+			log << "Computing edge weights                                  ... " << std::flush;
+			TIMER_START(compute_weights);
+
+			auto node_iterator = all_nodes_list.begin();
+			auto edge_iterator = all_edges_list.begin();
+
+			const auto all_edges_list_end_ = all_edges_list.end();
+			const auto all_nodes_list_end_ = all_nodes_list.end();
+
+			const auto weight_multiplier = scripting_environment.GetProfileProperties().GetWeightMultiplier();
+
+			const auto car = scripting_environment.GetCar();
+
+			while (edge_iterator != all_edges_list_end_ && node_iterator != all_nodes_list_end_)
+			{
+				// skip all invalid edges
+				if (edge_iterator->result.source == SPECIAL_NODEID)
+				{
+					++edge_iterator;
+					continue;
+				}
+
+				if (edge_iterator->result.osm_target_id < node_iterator->node_id)
+				{
+					util::Log(logDEBUG) << "Found invalid node reference " << static_cast<uint64_t>(edge_iterator->result.osm_target_id);
+					edge_iterator->result.target = SPECIAL_NODEID;
+					++edge_iterator;
+					continue;
+				}
+				if (edge_iterator->result.osm_target_id > node_iterator->node_id)
+				{
+					++node_iterator;
+					continue;
+				}
+
+				// We do not want to create an endless loop but allow the iterator to start from the beginning if necessary
+				bool overflow_happend = false;
+				while (*elevation_id_iterator != node_iterator->node_id) {
+					++elevation_id_iterator;
+					++elevation_value_iterator;
+					if (elevation_id_iterator == elevation_id_list.end()) {
+						if (!overflow_happend) {
+							elevation_id_iterator = elevation_id_list.begin();
+							elevation_value_iterator = elevation_value_list.begin();
+							overflow_happend = true;
+						} else {
+							throw std::runtime_error{"There was an iterator overflow in extraction_containers with the elevation iterator. "
+													 "Please rerun osrm-elevation and if the issue persists file a bug report"};
+						}
+					}
+				}
+
+				BOOST_ASSERT(edge_iterator->result.osm_target_id == node_iterator->node_id);
+				BOOST_ASSERT(edge_iterator->source_coordinate.lat != util::FixedLatitude{std::numeric_limits<std::int32_t>::min()});
+				BOOST_ASSERT(edge_iterator->source_coordinate.lon != util::FixedLongitude{std::numeric_limits<std::int32_t>::min()});
+
+				util::Coordinate source_coord(edge_iterator->source_coordinate);
+				util::Coordinate target_coord{node_iterator->lon, node_iterator->lat};
+				auto source_elevation = edge_iterator->source_elevation;
+				auto target_elevation = *elevation_value_iterator;
+
+				// flip source and target coordinates if segment is in backward direction only
+				if (!edge_iterator->result.flags.forward && edge_iterator->result.flags.backward) {
+					std::swap(source_coord, target_coord);
+					std::swap(source_elevation, target_elevation);
+				}
+
+				const auto accurate_distance = util::coordinate_calculation::haversineWithElevation(source_coord, target_coord, source_elevation, target_elevation);
+				const auto weight = edge_iterator->weight_data(accurate_distance);
+				const auto duration = edge_iterator->duration_data(accurate_distance);
+
+				ExtractionSegment segment(source_coord, target_coord, accurate_distance, weight, duration);
+				scripting_environment.ProcessSegment(segment);
+
+				auto &edge = edge_iterator->result;
+				edge.weight = std::max<EdgeWeight>(1, std::round(segment.weight * weight_multiplier));
+				edge.duration = std::max<EdgeWeight>(1, std::round(segment.duration * 10.));
+				edge.distance = accurate_distance;
+
+				if (edge.distance > 0) {
+					const auto slope = target_elevation - source_elevation;
+					auto consumption_factors = osrm::util::enav::calculate_consumption_factors(accurate_distance, edge_iterator->speed, slope);
+					edge.driving_factor  = consumption_factors.first;
+					edge.resistance_factor = consumption_factors.second;
+				} else {
+					edge.driving_factor = 0;
+					edge.resistance_factor = 0;
+				}
+
+
+				// assign new node id
+				const auto node_id = mapExternalToInternalNodeID(
+						used_node_id_list.begin(), used_node_id_list.end(), node_iterator->node_id);
+				BOOST_ASSERT(node_id != SPECIAL_NODEID);
+				edge.target = node_id;
+
+				// orient edges consistently: source id < target id
+				// important for multi-edge removal
+				if (edge.source > edge.target)
+				{
+					std::swap(edge.source, edge.target);
+
+					// std::swap does not work with bit-fields
+					bool temp = edge.flags.forward;
+					edge.flags.forward = edge.flags.backward;
+					edge.flags.backward = temp;
+				}
+				++edge_iterator;
+			}
+
+			// Remove all remaining edges. They are invalid because there are no corresponding nodes for
+			// them. This happens when using osmosis with bbox or polygon to extract smaller areas.
+			auto markTargetsInvalid = [](InternalExtractorEdge &edge) {
+				util::Log(logDEBUG) << "Found invalid node reference " << edge.result.target;
+				edge.result.target = SPECIAL_NODEID;
+			};
+			std::for_each(edge_iterator, all_edges_list_end_, markTargetsInvalid);
+			TIMER_STOP(compute_weights);
+			log << "ok, after " << TIMER_SEC(compute_weights) << "s";
+		}
+
+		// Sort edges by start.
+		{
+			util::UnbufferedLog log;
+			log << "Sorting edges by renumbered start                       ... ";
+			TIMER_START(sort_edges_by_renumbered_start);
+			tbb::parallel_sort(all_edges_list.begin(),
+			                   all_edges_list.end(),
+			                   CmpEdgeByInternalSourceTargetAndName{
+					                   all_edges_annotation_data_list, name_char_data, name_offsets});
+			TIMER_STOP(sort_edges_by_renumbered_start);
+			log << "ok, after " << TIMER_SEC(sort_edges_by_renumbered_start) << "s";
+		}
+
+		BOOST_ASSERT(!all_edges_list.empty());
+		for (std::size_t i = 0; i < all_edges_list.size();)
+		{
+			// only invalid edges left
+			if (all_edges_list[i].result.source == SPECIAL_NODEID)
+			{
+				break;
+			}
+			// skip invalid edges
+			if (all_edges_list[i].result.target == SPECIAL_NODEID)
+			{
+				++i;
+				continue;
+			}
+
+			std::size_t start_idx = i;
+			NodeID source = all_edges_list[i].result.source;
+			NodeID target = all_edges_list[i].result.target;
+
+			auto min_forward = std::make_pair(std::numeric_limits<EdgeWeight>::max(),
+			                                  std::numeric_limits<EdgeWeight>::max());
+			auto min_backward = std::make_pair(std::numeric_limits<EdgeWeight>::max(),
+			                                   std::numeric_limits<EdgeWeight>::max());
+			std::size_t min_forward_idx = std::numeric_limits<std::size_t>::max();
+			std::size_t min_backward_idx = std::numeric_limits<std::size_t>::max();
+
+			// find minimal edge in both directions
+			while (i < all_edges_list.size() && all_edges_list[i].result.source == source &&
+			       all_edges_list[i].result.target == target)
+			{
+				const auto &result = all_edges_list[i].result;
+				const auto value = std::make_pair(result.weight, result.duration);
+				if (result.flags.forward && value < min_forward)
+				{
+					min_forward_idx = i;
+					min_forward = value;
+				}
+				if (result.flags.backward && value < min_backward)
+				{
+					min_backward_idx = i;
+					min_backward = value;
+				}
+
+				// this also increments the outer loop counter!
+				i++;
+			}
+
+			BOOST_ASSERT(min_forward_idx == std::numeric_limits<std::size_t>::max() ||
+			             min_forward_idx < i);
+			BOOST_ASSERT(min_backward_idx == std::numeric_limits<std::size_t>::max() ||
+			             min_backward_idx < i);
+			BOOST_ASSERT(min_backward_idx != std::numeric_limits<std::size_t>::max() ||
+			             min_forward_idx != std::numeric_limits<std::size_t>::max());
+
+			if (min_backward_idx == min_forward_idx)
+			{
+				all_edges_list[min_forward_idx].result.flags.is_split = false;
+				all_edges_list[min_forward_idx].result.flags.forward = true;
+				all_edges_list[min_forward_idx].result.flags.backward = true;
+			}
+			else
+			{
+				bool has_forward = min_forward_idx != std::numeric_limits<std::size_t>::max();
+				bool has_backward = min_backward_idx != std::numeric_limits<std::size_t>::max();
+				if (has_forward)
+				{
+					all_edges_list[min_forward_idx].result.flags.forward = true;
+					all_edges_list[min_forward_idx].result.flags.backward = false;
+					all_edges_list[min_forward_idx].result.flags.is_split = has_backward;
+				}
+				if (has_backward)
+				{
+					std::swap(all_edges_list[min_backward_idx].result.source,
+					          all_edges_list[min_backward_idx].result.target);
+					all_edges_list[min_backward_idx].result.flags.forward = true;
+					all_edges_list[min_backward_idx].result.flags.backward = false;
+					all_edges_list[min_backward_idx].result.flags.is_split = has_forward;
+				}
+			}
+
+			// invalidate all unused edges
+			for (std::size_t j = start_idx; j < i; j++)
+			{
+				if (j == min_forward_idx || j == min_backward_idx)
+				{
+					continue;
+				}
+				all_edges_list[j].result.source = SPECIAL_NODEID;
+				all_edges_list[j].result.target = SPECIAL_NODEID;
+			}
+		}
+	}
+
 void ExtractionContainers::WriteMetadata(storage::tar::FileWriter &writer) const
 {
     util::UnbufferedLog log;
-    log << "Writing way meta-data     ... " << std::flush;
+    log << "Writing way meta-data                                   ... " << std::flush;
     TIMER_START(write_meta_data);
 
     storage::serialization::write(writer, "/extractor/annotations", all_edges_annotation_data_list);
@@ -633,7 +683,7 @@ void ExtractionContainers::WriteNodes(storage::tar::FileWriter &writer) const
 {
     {
         util::UnbufferedLog log;
-        log << "Confirming/Writing used nodes     ... ";
+        log << "Confirming/Writing used nodes                           ... ";
         TIMER_START(write_nodes);
         // identify all used nodes by a merging step of two sorted lists
         auto node_iterator = all_nodes_list.begin();
@@ -673,7 +723,7 @@ void ExtractionContainers::WriteNodes(storage::tar::FileWriter &writer) const
 
     {
         util::UnbufferedLog log;
-        log << "Writing barrier nodes     ... ";
+        log << "Writing barrier nodes                                   ... ";
         TIMER_START(write_nodes);
         std::vector<NodeID> internal_barrier_nodes;
         for (const auto osm_id : barrier_nodes)
@@ -691,7 +741,7 @@ void ExtractionContainers::WriteNodes(storage::tar::FileWriter &writer) const
 
     {
         util::UnbufferedLog log;
-        log << "Writing traffic light nodes     ... ";
+        log << "Writing traffic light nodes                             ... ";
         TIMER_START(write_nodes);
         std::vector<NodeID> internal_traffic_signals;
         for (const auto osm_id : traffic_signals)
@@ -718,7 +768,7 @@ ExtractionContainers::ReferencedWays ExtractionContainers::IdentifyManeuverOverr
     // prepare for extracting source/destination nodes for all maneuvers
     util::UnbufferedLog log;
     log << "Collecting way information on " << external_maneuver_overrides_list.size()
-        << " maneuver overrides...";
+        << " maneuver overrides  ... ";
     TIMER_START(identify_maneuver_override_ways);
 
     const auto mark_ids = [&](auto const &external_maneuver_override) {
@@ -732,8 +782,7 @@ ExtractionContainers::ReferencedWays ExtractionContainers::IdentifyManeuverOverr
 
     // First, make an empty hashtable keyed by the ways referenced
     // by the maneuver overrides
-    std::for_each(
-        external_maneuver_overrides_list.begin(), external_maneuver_overrides_list.end(), mark_ids);
+    std::for_each(external_maneuver_overrides_list.begin(), external_maneuver_overrides_list.end(), mark_ids);
 
     const auto set_ids = [&](size_t way_list_idx, auto const &way_id) {
         auto itr = maneuver_override_ways.find(way_id);
@@ -913,7 +962,7 @@ void ExtractionContainers::PrepareManeuverOverrides(const ReferencedWays &maneuv
     {
         util::UnbufferedLog log;
         log << "Collecting node information on " << external_maneuver_overrides_list.size()
-            << " maneuver overrides...";
+            << " maneuver overrides     ... ";
         TIMER_START(transform);
         std::for_each(external_maneuver_overrides_list.begin(),
                       external_maneuver_overrides_list.end(),
@@ -930,7 +979,7 @@ ExtractionContainers::ReferencedWays ExtractionContainers::IdentifyRestrictionWa
 
     // Prepare for extracting nodes for all restrictions
     util::UnbufferedLog log;
-    log << "Collecting way information on " << restrictions_list.size() << " restrictions...";
+    log << "Collecting way information on " << restrictions_list.size() << " restrictions           ... ";
     TIMER_START(identify_restriction_ways);
 
     // Enter invalid IDs into the map to indicate that we want to find out about
@@ -1162,9 +1211,7 @@ void ExtractionContainers::PrepareRestrictions(const ReferencedWays &restriction
 
     // Check if we were able to resolve all the involved OSM elements before translating to an
     // internal restriction
-    auto const get_node_restriction_from_OSM_ids = [&](auto const from_id,
-                                                       auto const to_id,
-                                                       const OSMNodeID via_node) {
+    auto const get_node_restriction_from_OSM_ids = [&](auto const from_id, auto const to_id, const OSMNodeID via_node) {
         auto const from_segment_itr = restriction_ways.find(from_id);
 
         if (from_segment_itr->second.way_id != from_id)
@@ -1227,7 +1274,7 @@ void ExtractionContainers::PrepareRestrictions(const ReferencedWays &restriction
     // Transforming the restrictions into the dedicated internal types
     {
         util::UnbufferedLog log;
-        log << "Collecting node information on " << restrictions_list.size() << " restrictions...";
+        log << "Collecting node information on " << restrictions_list.size() << " restrictions      ... ";
         TIMER_START(transform);
         std::for_each(
             restrictions_list.begin(), restrictions_list.end(), transform_into_internal_types);

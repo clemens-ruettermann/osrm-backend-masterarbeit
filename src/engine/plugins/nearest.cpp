@@ -60,6 +60,70 @@ Status NearestPlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms
 
     return Status::Ok;
 }
+
+
+std::vector<PhantomNodePair> NearestPlugin::GetSnappedPhantomNodes(const RoutingAlgorithmsInterface &algorithms, const std::vector<util::Coordinate> & coordinates) const {
+	if (!CheckAllCoordinates(coordinates)) {
+		throw std::runtime_error("Coordinates are invalid");
+	}
+
+	const auto &facade = algorithms.GetFacade();
+	api::BaseParameters params;
+	for (size_t i = 0; i < coordinates.size(); i++) {
+		params.approaches.emplace_back(Approach::UNRESTRICTED);
+	}
+	params.snapping = api::BaseParameters::SnappingType::Any;
+	params.coordinates = coordinates;
+	std::vector<PhantomNodePair> phantom_nodes = GetPhantomNodes(facade, params);
+
+	if (phantom_nodes.size() != coordinates.size())
+	{
+		auto mismatch = std::mismatch(phantom_nodes.begin(),
+		                              phantom_nodes.end(),
+		                              coordinates.begin(),
+		                              coordinates.end(),
+		                              [](const auto &phantom_node, const auto &coordinate) {
+			                              return phantom_node.first.input_location == coordinate;
+		                              });
+		std::size_t missing_index = std::distance(phantom_nodes.begin(), mismatch.first);
+		std::string msg = std::string("Could not find a matching segment for coordinate ") + std::to_string(missing_index);
+		throw std::runtime_error{msg};
+	}
+
+//	auto snapped_phantoms = SnapPhantomNodes(phantom_nodes);
+	return phantom_nodes;
+}
+
+PhantomNodePair NearestPlugin::GetPhantomNodePair(const RoutingAlgorithmsInterface &algorithms, const util::Coordinate & coordinate) const {
+	if (!coordinate.IsValid()) {
+		throw std::runtime_error{"Coordinate is invalid"};
+	}
+	const auto &facade = algorithms.GetFacade();
+	api::BaseParameters params;
+	params.approaches.emplace_back(Approach::UNRESTRICTED);
+	params.snapping = api::BaseParameters::SnappingType::Any;
+	params.coordinates.emplace_back(coordinate);
+	std::vector<PhantomNodePair> phantom_nodes = GetPhantomNodes(facade, params);
+
+	if (phantom_nodes.size() != 1)
+	{
+		std::string msg = std::string("Could not find a matching segment for coordinate ");
+		throw std::runtime_error{msg};
+	}
+	return phantom_nodes.at(0);
+}
+
+
+std::vector<PhantomNode> NearestPlugin::SnapPhantomNodePairs(const std::vector<PhantomNodePair> & phantom_node_pairs) const {
+	return SnapPhantomNodes(phantom_node_pairs);
+}
+
+PhantomNode NearestPlugin::SnapPhantomNodePair(const PhantomNodePair & phantom_node_pair) const {
+	auto res = SnapPhantomNodes({phantom_node_pair});
+	BOOST_ASSERT(res.size() == 1);
+	return res[0];
+}
+
 } // namespace plugins
 } // namespace engine
 } // namespace osrm

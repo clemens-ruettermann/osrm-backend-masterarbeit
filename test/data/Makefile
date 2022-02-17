@@ -14,11 +14,62 @@ PROFILE:=$(PROFILE_ROOT)/car.lua
 
 all: data
 
+<<<<<<< HEAD
 data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr mld/$(DATA_NAME).osrm.partition
 
 clean:
 	-rm -r $(DATA_NAME).*
 	-rm -r ch corech mld
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr street/street.osrm.hsgr
+#mld/$(DATA_NAME).osrm.partition
+
+clean:
+	-rm -rf $(DATA_NAME).osrm*
+	-rm -rf street.osrm*
+	-rm -rf ch corech mld street
+
+$(DATA_NAME).osrm: $(DATA_NAME).osm.pbf $(DATA_NAME).poly $(PROFILE) $(OSRM_EXTRACT)
+	@echo "Verifiyng data file integrity..."
+	$(MD5SUM) -c data.md5sum
+	@echo "Running osrm-extract..."
+	$(TIMER) "osrm-elevation\t$@" $(OSRM_ELEVATION) $(DATA_NAME).osm.pbf --geotiff elevation/monaco_south.tif --geotiff elevation/monaco_north.tif
+	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) $< -p $(PROFILE)
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr mld/$(DATA_NAME).osrm.partition street/street.osrm.hsgr
+=======
+data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr street/street.osrm.hsgr mld/$(DATA_NAME).osrm.partition
+>>>>>>> 8bff31d5b (Sehr wichtiger Commit; Ich habe die zentralen Bugs der Verbrauchsberechnung gefunden; NON_ZERO_CONSUMPTION als define eingefügt; kleinzeug)
+=======
+data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr street/street.osrm.hsgr
+#mld/$(DATA_NAME).osrm.partition
+>>>>>>> 734713053 (Erste Version von DBSCan in C++)
+
+clean:
+	-rm -r $(DATA_NAME).osrm*
+	-rm -r street.osrm.*
+	-rm -r ch corech mld street
+>>>>>>> bf370cdff (WIP: Code zum erstellen des Charger Graphen hinzugefuegt)
+=======
+>>>>>>> 99695d3a2 (DBScan neu implementiert (erfolgreich))
+=======
+>>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+>>>>>>> 50f7a6754 (Split consumption into two factors)
 
 ch/$(DATA_NAME).osrm: $(DATA_NAME).osrm
 	mkdir -p ch
@@ -32,11 +83,31 @@ mld/$(DATA_NAME).osrm: $(DATA_NAME).osrm
 	mkdir -p mld
 	cp $(DATA_NAME).osrm $(DATA_NAME).osrm.* mld/
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 50f7a6754 (Split consumption into two factors)
 $(DATA_NAME).osrm: $(DATA_NAME).osm.pbf $(DATA_NAME).poly $(PROFILE) $(OSRM_EXTRACT)
 	@echo "Verifiyng data file integrity..."
 	$(MD5SUM) -c data.md5sum
 	@echo "Running osrm-extract..."
+<<<<<<< HEAD
 	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) $< -p $(PROFILE)
+=======
+	$(TIMER) "osrm-elevation\t$@" $(OSRM_ELEVATION) $(DATA_NAME).osm.pbf --geotiff elevation/monaco_south.tif --geotiff elevation/monaco_north.tif
+	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) $< -p $(PROFILE)
+>>>>>>> bf370cdff (WIP: Code zum erstellen des Charger Graphen hinzugefuegt)
+=======
+>>>>>>> 99695d3a2 (DBScan neu implementiert (erfolgreich))
+=======
+>>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+>>>>>>> 50f7a6754 (Split consumption into two factors)
 
 ch/$(DATA_NAME).osrm.hsgr: ch/$(DATA_NAME).osrm $(PROFILE) $(OSRM_CONTRACT)
 	@echo "Running osrm-contract..."

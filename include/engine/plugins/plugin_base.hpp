@@ -306,11 +306,11 @@ class BasePlugin
         for (const auto i : util::irange<std::size_t>(0UL, parameters.coordinates.size()))
         {
             Approach approach = engine::Approach::UNRESTRICTED;
-            if (use_approaches && parameters.approaches[i])
-                approach = parameters.approaches[i].get();
+            if (use_approaches && parameters.approaches[i]) {
+	            approach = parameters.approaches[i].get();
+			}
 
-            if (use_hints && parameters.hints[i] &&
-                parameters.hints[i]->IsValid(parameters.coordinates[i], facade))
+            if (use_hints && parameters.hints[i] && parameters.hints[i]->IsValid(parameters.coordinates[i], facade))
             {
                 phantom_node_pairs[i].first = parameters.hints[i]->phantom;
                 // we don't set the second one - it will be marked as invalid

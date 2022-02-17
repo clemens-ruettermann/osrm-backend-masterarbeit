@@ -718,25 +718,19 @@ InternalManyRoutesResult alternativePathSearch(SearchEngineData<Algorithm> &engi
         if (node == middle_node)
             continue;
         const auto fwd_iterator = approximated_forward_sharing.find(node);
-        const EdgeWeight fwd_sharing =
-            (fwd_iterator != approximated_forward_sharing.end()) ? fwd_iterator->second : 0;
+        const EdgeWeight fwd_sharing = (fwd_iterator != approximated_forward_sharing.end()) ? fwd_iterator->second : 0;
         const auto rev_iterator = approximated_reverse_sharing.find(node);
-        const EdgeWeight rev_sharing =
-            (rev_iterator != approximated_reverse_sharing.end()) ? rev_iterator->second : 0;
+        const EdgeWeight rev_sharing = (rev_iterator != approximated_reverse_sharing.end()) ? rev_iterator->second : 0;
 
         const EdgeWeight approximated_sharing = fwd_sharing + rev_sharing;
-        const EdgeWeight approximated_weight =
-            forward_heap1.GetKey(node) + reverse_heap1.GetKey(node);
-        const bool weight_passes =
-            (approximated_weight < upper_bound_to_shortest_path_weight * (1 + VIAPATH_EPSILON));
-        const bool sharing_passes =
-            (approximated_sharing <= upper_bound_to_shortest_path_weight * VIAPATH_GAMMA);
+        const EdgeWeight approximated_weight = forward_heap1.GetKey(node) + reverse_heap1.GetKey(node);
+        const bool weight_passes = (approximated_weight < upper_bound_to_shortest_path_weight * (1 + VIAPATH_EPSILON));
+        const bool sharing_passes = (approximated_sharing <= upper_bound_to_shortest_path_weight * VIAPATH_GAMMA);
         const bool stretch_passes =
             (approximated_weight - approximated_sharing) <
             ((1. + VIAPATH_EPSILON) * (upper_bound_to_shortest_path_weight - approximated_sharing));
 
-        if (weight_passes && sharing_passes && stretch_passes)
-        {
+        if (weight_passes && sharing_passes && stretch_passes) {
             preselected_node_list.emplace_back(node);
         }
     }
@@ -762,8 +756,7 @@ InternalManyRoutesResult alternativePathSearch(SearchEngineData<Algorithm> &engi
                                          &sharing_of_via_path,
                                          packed_shortest_path,
                                          min_edge_offset);
-        const EdgeWeight maximum_allowed_sharing =
-            static_cast<EdgeWeight>(upper_bound_to_shortest_path_weight * VIAPATH_GAMMA);
+        const EdgeWeight maximum_allowed_sharing = static_cast<EdgeWeight>(upper_bound_to_shortest_path_weight * VIAPATH_GAMMA);
         if (sharing_of_via_path <= maximum_allowed_sharing &&
             weight_of_via_path <= upper_bound_to_shortest_path_weight * (1 + VIAPATH_EPSILON))
         {

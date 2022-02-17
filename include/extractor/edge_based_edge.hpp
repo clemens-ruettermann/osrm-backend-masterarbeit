@@ -16,7 +16,7 @@ struct EdgeBasedEdge
     struct EdgeData
     {
         EdgeData()
-            : turn_id(0), weight(0), distance(0), duration(0), forward(false), backward(false)
+            : turn_id(0), weight(0), distance(0), duration(0), driving_factor(0), resistance_factor(0), forward(false), backward(false)
         {
         }
 
@@ -24,18 +24,22 @@ struct EdgeBasedEdge
                  const EdgeWeight weight,
                  const EdgeDistance distance,
                  const EdgeWeight duration,
+				 const EdgeDrivingFactor driving_factor,
+				 const EdgeResistanceFactor resistance_factor,
                  const bool forward,
                  const bool backward)
-            : turn_id(turn_id), weight(weight), distance(distance), duration(duration),
+            : turn_id(turn_id), weight(weight), distance(distance), duration(duration), driving_factor(driving_factor), resistance_factor(resistance_factor),
               forward(forward), backward(backward)
         {
         }
 
         NodeID turn_id; // ID of the edge based node (node based edge)
         EdgeWeight weight;
-        EdgeDistance distance;
-        EdgeWeight duration : 30;
-        std::uint32_t forward : 1;
+	    EdgeDrivingFactor driving_factor;
+		EdgeResistanceFactor resistance_factor;
+	    EdgeDistance distance;
+	    EdgeWeight duration : 30;
+	    std::uint32_t forward : 1;
         std::uint32_t backward : 1;
 
         auto is_unidirectional() const { return !forward || !backward; }
@@ -49,6 +53,8 @@ struct EdgeBasedEdge
                   const EdgeWeight weight,
                   const EdgeWeight duration,
                   const EdgeDistance distance,
+				  const EdgeDrivingFactor driving_factor,
+				  const EdgeResistanceFactor resistance_factor,
                   const bool forward,
                   const bool backward);
     EdgeBasedEdge(const NodeID source, const NodeID target, const EdgeBasedEdge::EdgeData &data);
@@ -59,10 +65,12 @@ struct EdgeBasedEdge
     NodeID target;
     EdgeData data;
 };
-static_assert(sizeof(extractor::EdgeBasedEdge) == 24,
-              "Size of extractor::EdgeBasedEdge type is "
-              "bigger than expected. This will influence "
-              "memory consumption.");
+
+
+//static_assert(sizeof(extractor::EdgeBasedEdge) == 28,
+//              "Size of extractor::EdgeBasedEdge type is "
+//              "bigger than expected. This will influence "
+//              "memory consumption.");
 
 // Impl.
 
@@ -74,9 +82,11 @@ inline EdgeBasedEdge::EdgeBasedEdge(const NodeID source,
                                     const EdgeWeight weight,
                                     const EdgeWeight duration,
                                     const EdgeDistance distance,
+									const EdgeDrivingFactor driving_factor,
+									const EdgeResistanceFactor resistance_factor,
                                     const bool forward,
                                     const bool backward)
-    : source(source), target(target), data{turn_id, weight, distance, duration, forward, backward}
+    : source(source), target(target), data{turn_id, weight, distance, duration, driving_factor, resistance_factor, forward, backward}
 {
 }
 

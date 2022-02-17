@@ -4,7 +4,7 @@
 #include "server/api/base_parameters_grammar.hpp"
 #include "engine/api/route_parameters.hpp"
 
-#include <boost/spirit/include/phoenix.hpp>
+#include <boost/phoenix.hpp>
 #include <boost/spirit/include/qi.hpp>
 
 namespace osrm
@@ -73,10 +73,14 @@ struct RouteParametersGrammar : public BaseParametersGrammar<Iterator, Signature
             "full", engine::api::RouteParameters::OverviewType::Full)(
             "false", engine::api::RouteParameters::OverviewType::False);
 
-        annotations_type.add("duration", AnnotationsType::Duration)("nodes",
-                                                                    AnnotationsType::Nodes)(
-            "distance", AnnotationsType::Distance)("weight", AnnotationsType::Weight)(
-            "datasources", AnnotationsType::Datasources)("speed", AnnotationsType::Speed);
+        annotations_type.add
+		("duration", AnnotationsType::Duration)
+		("nodes",AnnotationsType::Nodes)
+		("distance", AnnotationsType::Distance)
+		("weight", AnnotationsType::Weight)
+		("consumption", AnnotationsType::Consumption)
+		("datasources", AnnotationsType::Datasources)
+		("speed", AnnotationsType::Speed);
 
         waypoints_rule =
             qi::lit("waypoints=") >

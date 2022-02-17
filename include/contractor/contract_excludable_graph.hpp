@@ -14,8 +14,7 @@ namespace contractor
 
 using GraphAndFilter = std::tuple<QueryGraph, std::vector<std::vector<bool>>>;
 
-inline auto contractFullGraph(ContractorGraph contractor_graph,
-                              std::vector<EdgeWeight> node_weights)
+inline auto contractFullGraph(ContractorGraph contractor_graph, std::vector<EdgeWeight> node_weights)
 {
     auto num_nodes = contractor_graph.GetNumberOfNodes();
     contractGraph(contractor_graph, node_weights);
@@ -30,6 +29,16 @@ inline auto contractExcludableGraph(ContractorGraph contractor_graph_,
                                     std::vector<EdgeWeight> node_weights,
                                     const std::vector<std::vector<bool>> &filters)
 {
+#ifdef NON_ZERO_CONSUMPTION
+	for (const auto node : util::irange(0u, contractor_graph_.GetNumberOfNodes()))
+	{
+		for (auto edge : contractor_graph_.GetAdjacentEdgeRange(node)) {
+			const auto &data = contractor_graph_.GetEdgeData(edge);
+			BOOST_ASSERT(data.consumption != 0);
+		}
+	}
+#endif
+
     if (filters.size() == 1)
     {
         if (std::all_of(filters.front().begin(), filters.front().end(), [](auto v) { return v; }))
@@ -91,6 +100,9 @@ inline auto contractExcludableGraph(ContractorGraph contractor_graph_,
         edge_container.Merge(toEdges<QueryEdge>(std::move(filtered_core_graph)));
     }
 
+    for (const auto & edge : edge_container.edges) {
+        BOOST_ASSERT(edge.data.driving_factor != edge.data.resistance_factor);
+    }
     return GraphAndFilter{QueryGraph{num_nodes, std::move(edge_container.edges)},
                           edge_container.MakeEdgeFilters()};
 }

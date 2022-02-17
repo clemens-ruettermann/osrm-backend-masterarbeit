@@ -5,6 +5,7 @@
 #include "extractor/maneuver_override.hpp"
 #include "extractor/profile_properties.hpp"
 #include "extractor/restriction.hpp"
+#include "util/car.hpp"
 
 #include <osmium/memory/buffer.hpp>
 
@@ -52,6 +53,7 @@ class ScriptingEnvironment
     virtual ~ScriptingEnvironment() = default;
 
     virtual const ProfileProperties &GetProfileProperties() = 0;
+	virtual const enav::Car & GetCar() = 0;
 
     virtual std::vector<std::vector<std::string>> GetExcludableClasses() = 0;
     virtual std::vector<std::string> GetClassNames() = 0;

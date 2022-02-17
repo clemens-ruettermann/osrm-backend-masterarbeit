@@ -271,7 +271,67 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return segment_data.GetReverseWeights(id);
     }
 
-    // Returns the data source ids that were used to supply the edge
+	DrivingFactorForwardRange GetUncompressedForwardDrivingFactors(const EdgeID id) const override {
+//		auto a = segment_data.GetForwardDrivingFactors(id);
+//		std::vector<double> v;
+//		for (auto & it : a) {
+//			v.emplace_back(it);
+//		}
+//
+//		auto b = segment_data.GetForwardResistanceFactors(id);
+//		std::vector<double> vv;
+//		for (auto & it : b) {
+//			vv.emplace_back(it);
+//		}
+		return segment_data.GetForwardDrivingFactors(id);
+	}
+
+	DrivingFactorReverseRange GetUncompressedReverseDrivingFactors(const EdgeID id) const override {
+//		auto a = segment_data.GetReverseDrivingFactors(id);
+//		std::vector<double> v;
+//		for (auto & it : a) {
+//			v.emplace_back(it);
+//		}
+//
+//		auto b = segment_data.GetReverseResistanceFactors(id);
+//		std::vector<double> vv;
+//		for (auto & it :b) {
+//			vv.emplace_back(it);
+//		}
+		return segment_data.GetReverseDrivingFactors(id);
+	}
+
+	ResistanceFactorForwardRange GetUncompressedForwardResistanceFactors(const EdgeID id) const override {
+//		auto a = segment_data.GetForwardDrivingFactors(id);
+//		std::vector<double> v;
+//		for (auto & it : a) {
+//			v.emplace_back(it);
+//		}
+//
+//		auto b = segment_data.GetForwardResistanceFactors(id);
+//		std::vector<double> vv;
+//		for (auto & it : b) {
+//			vv.emplace_back(it);
+//		}
+		return segment_data.GetForwardResistanceFactors(id);
+	}
+
+	ResistanceFactorReverseRange GetUncompressedReverseResistanceFactors(const EdgeID id) const override {
+//		auto a = segment_data.GetForwardDrivingFactors(id);
+//		std::vector<double> v;
+//		for (auto & it : a) {
+//			v.emplace_back(it);
+//		}
+//
+//		auto b = segment_data.GetForwardResistanceFactors(id);
+//		std::vector<double> vv;
+//		for (auto & it : b) {
+//			vv.emplace_back(it);
+//		}
+		return segment_data.GetReverseResistanceFactors(id);
+	}
+
+	// Returns the data source ids that were used to supply the edge
     // weights.
     DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID id) const override final
     {
@@ -715,6 +775,15 @@ template <> class ContiguousInternalMemoryAlgorithmDataFacade<MLD> : public Algo
     {
         return query_graph.GetNodeDistance(node);
     }
+
+
+	EdgeDrivingFactor GetNodeDrivingFactor(const NodeID node) const override final {
+		return query_graph.GetNodeDrivingFactor(node);
+	}
+
+	EdgeResistanceFactor GetNodeResistanceFactor(const NodeID node) const override final {
+		return query_graph.GetNodeResistanceFactor(node);
+	}
 
     bool IsForwardEdge(const NodeID node) const override final
     {

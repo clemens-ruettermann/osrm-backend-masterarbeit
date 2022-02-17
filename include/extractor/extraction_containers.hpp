@@ -34,7 +34,7 @@ class ExtractionContainers
     void PrepareNodes();
     void PrepareManeuverOverrides(const ReferencedWays &maneuver_override_ways);
     void PrepareRestrictions(const ReferencedWays &restriction_ways);
-    void PrepareEdges(ScriptingEnvironment &scripting_environment);
+    void PrepareEdges(ScriptingEnvironment &scripting_environment, const std::string &elevation_path);
 
     void WriteNodes(storage::tar::FileWriter &file_out) const;
     void WriteEdges(storage::tar::FileWriter &file_out) const;
@@ -79,6 +79,7 @@ class ExtractionContainers
 
     void PrepareData(ScriptingEnvironment &scripting_environment,
                      const std::string &osrm_path,
+                     const std::string &elevation_path,
                      const std::string &names_data_path);
 };
 } // namespace extractor

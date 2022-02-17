@@ -64,12 +64,14 @@ struct ExtractorConfig final : storage::IOConfig
                ".osrm.turn_duration_penalties",
                ".osrm.turn_weight_penalties",
                ".osrm.turn_penalties_index",
+			   ".osrm.elevation",
                ".osrm.enw",
                ".osrm.properties",
                ".osrm.icd",
                ".osrm.cnbg",
                ".osrm.cnbg_to_ebg",
-               ".osrm.maneuver_overrides"}),
+               ".osrm.maneuver_overrides",
+			   ".osrm.car.properties"}),
           requested_num_threads(0), parse_conditionals(false), use_locations_cache(true)
     {
     }

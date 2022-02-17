@@ -43,8 +43,9 @@ struct LegGeometry
         // the turn penalty if the segment preceeds a turn
         double duration;
         double weight; // weight value, NOT including the turn weight
-
+		std::pair<double, double> consumption_factor_pair;
         DatasourceID datasource;
+
     };
     std::vector<Annotation> annotations;
 

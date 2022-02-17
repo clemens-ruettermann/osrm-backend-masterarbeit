@@ -65,6 +65,14 @@ class BaseDataFacade
         boost::iterator_range<extractor::SegmentDataView::SegmentDurationVector::const_iterator>;
     using DurationReverseRange = boost::reversed_range<const DurationForwardRange>;
 
+	using DrivingFactorForwardRange =
+	boost::iterator_range<extractor::SegmentDataView::SegmentDrivingFactorVector::const_iterator>;
+	using DrivingFactorReverseRange = boost::reversed_range<const DrivingFactorForwardRange>;
+
+	using ResistanceFactorForwardRange =
+	boost::iterator_range<extractor::SegmentDataView::SegmentResistanceFactorVector::const_iterator>;
+	using ResistanceFactorReverseRange = boost::reversed_range<const ResistanceFactorForwardRange>;
+
     using DatasourceForwardRange =
         boost::iterator_range<extractor::SegmentDataView::SegmentDatasourceVector::const_iterator>;
     using DatasourceReverseRange = boost::reversed_range<const DatasourceForwardRange>;
@@ -101,6 +109,14 @@ class BaseDataFacade
     // Should always be 1 shorter than GetUncompressedGeometry
     virtual DurationForwardRange GetUncompressedForwardDurations(const EdgeID id) const = 0;
     virtual DurationReverseRange GetUncompressedReverseDurations(const EdgeID id) const = 0;
+
+	// Gets the consumption values for each segment in an uncompressed geometry.
+	// Should always be 1 shorter than GetUncompressedGeometry
+	virtual DrivingFactorForwardRange GetUncompressedForwardDrivingFactors(const EdgeID id) const = 0;
+	virtual DrivingFactorReverseRange GetUncompressedReverseDrivingFactors(const EdgeID id) const = 0;
+
+	virtual ResistanceFactorForwardRange GetUncompressedForwardResistanceFactors(const EdgeID id) const = 0;
+	virtual ResistanceFactorReverseRange GetUncompressedReverseResistanceFactors(const EdgeID id) const = 0;
 
     // Returns the data source ids that were used to supply the edge
     // weights.  Will return an empty array when only the base profile is used.

@@ -12,6 +12,9 @@
 #include "util/coordinate.hpp"
 #include "util/json_container.hpp"
 
+//TODO KENSPECKLE wieder entfernen
+#include "util/json_renderer.hpp"
+
 #include <boost/optional.hpp>
 
 #include <algorithm>
@@ -85,6 +88,14 @@ util::json::Object makeGeoJSONGeometry(ForwardIter begin, ForwardIter end)
     }
     geojson.values["coordinates"] = std::move(coordinates);
 
+	std::vector<char> str_vec;
+	util::json::render(str_vec, geojson);
+	std::stringstream ss;
+	for (auto & it : str_vec) {
+		ss << it;
+	}
+
+	auto str = ss.str();
     return geojson;
 }
 

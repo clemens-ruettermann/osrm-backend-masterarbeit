@@ -73,6 +73,8 @@ int Contractor::Run()
 
     util::Log() << "Reading node weights.";
     std::vector<EdgeWeight> node_weights;
+	std::vector<EdgeDrivingFactor> node_driving_factors;
+	std::vector<EdgeResistanceFactor> node_resistance_factors;
     extractor::files::readEdgeBasedNodeWeights(config.GetPath(".osrm.enw"), node_weights);
     util::Log() << "Done reading node weights.";
 
@@ -82,8 +84,8 @@ int Contractor::Run()
 
     updater::Updater updater(config.updater_config);
     std::uint32_t connectivity_checksum = 0;
-    EdgeID number_of_edge_based_nodes = updater.LoadAndUpdateEdgeExpandedGraph(
-        edge_based_edge_list, node_weights, connectivity_checksum);
+    std::uint32_t number_of_edge_based_nodes = updater.LoadAndUpdateEdgeExpandedGraph(
+        edge_based_edge_list, node_weights, node_driving_factors, node_resistance_factors, connectivity_checksum);
 
     // Convert node weights for oneway streets to INVALID_EDGE_WEIGHT
     for (auto &weight : node_weights)
@@ -92,7 +94,6 @@ int Contractor::Run()
     }
 
     // Contracting the edge-expanded graph
-
     TIMER_START(contraction);
 
     std::string metric_name;
@@ -105,8 +106,7 @@ int Contractor::Run()
         extractor::files::readProfileProperties(config.GetPath(".osrm.properties"), properties);
         metric_name = properties.GetWeightName();
 
-        node_filters =
-            util::excludeFlagsToNodeFilter(number_of_edge_based_nodes, node_data, properties);
+        node_filters = util::excludeFlagsToNodeFilter(number_of_edge_based_nodes, node_data, properties);
     }
 
     QueryGraph query_graph;
@@ -121,7 +121,8 @@ int Contractor::Run()
     util::Log() << "Contraction took " << TIMER_SEC(contraction) << " sec";
 
     std::unordered_map<std::string, ContractedMetric> metrics = {
-        {metric_name, {std::move(query_graph), std::move(edge_filters)}}};
+        {metric_name, {std::move(query_graph), std::move(edge_filters)}}
+	};
 
     files::writeGraph(config.GetPath(".osrm.hsgr"), metrics, connectivity_checksum);
 

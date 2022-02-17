@@ -80,6 +80,9 @@ template <> class AlgorithmDataFacade<MLD>
 
     virtual EdgeDistance GetNodeDistance(const NodeID node) const = 0;
 
+	virtual EdgeDrivingFactor GetNodeDrivingFactor(const NodeID node) const = 0;
+	virtual EdgeResistanceFactor GetNodeResistanceFactor(const NodeID node) const = 0;
+
     virtual bool IsForwardEdge(EdgeID edge) const = 0;
 
     virtual bool IsBackwardEdge(EdgeID edge) const = 0;

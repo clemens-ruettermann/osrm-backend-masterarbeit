@@ -28,6 +28,7 @@ auto makeGraph(const MultiLevelPartition &mlp, const std::vector<MockEdge> &mock
         EdgeWeight weight;
         EdgeDuration duration;
         EdgeDistance distance;
+		EdgeConsumption consumption;
         bool forward;
         bool backward;
     };
@@ -42,6 +43,7 @@ auto makeGraph(const MultiLevelPartition &mlp, const std::vector<MockEdge> &mock
                              m.weight,
                              2 * m.weight,
                              static_cast<EdgeDistance>(1.0),
+							 static_cast<EdgeConsumption>(1),
                              true,
                              false});
         edges.push_back(Edge{m.target,
@@ -49,6 +51,7 @@ auto makeGraph(const MultiLevelPartition &mlp, const std::vector<MockEdge> &mock
                              m.weight,
                              2 * m.weight,
                              static_cast<EdgeDistance>(1.0),
+							 static_cast<EdgeConsumption>(1),
                              false,
                              true});
     }

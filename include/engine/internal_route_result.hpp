@@ -41,9 +41,14 @@ struct PathData
     // duration that is traveled on the segment until the turn is reached,
     // including a turn if the segment preceeds one.
     EdgeWeight duration_until_turn;
-    // If this segment immediately preceeds a turn, then duration_of_turn
+	// If this segment immediately preceeds a turn, then duration_of_turn
     // will contain the duration of the turn.  Otherwise it will be 0.
     EdgeWeight duration_of_turn;
+	// consumption that is traveled on the segment until the turn is reached
+	EdgeDrivingFactor driving_factor_until_turn;
+	EdgeResistanceFactor resistance_factor_until_turn;
+
+
     // instruction to execute at the turn
     osrm::guidance::TurnInstruction turn_instruction;
     // turn lane data
@@ -75,7 +80,7 @@ struct InternalRouteResult
     std::vector<bool> target_traversed_in_reverse;
     EdgeWeight shortest_path_weight = INVALID_EDGE_WEIGHT;
 
-    bool is_valid() const { return INVALID_EDGE_WEIGHT != shortest_path_weight; }
+    bool is_valid() const { return INVALID_EDGE_WEIGHT != shortest_path_weight;}
 
     bool is_via_leg(const std::size_t leg) const
     {
@@ -83,14 +88,13 @@ struct InternalRouteResult
     }
 
     // Note: includes duration for turns, except for at start and end node.
-    EdgeWeight duration() const
-    {
+    EdgeWeight duration() const {
         EdgeWeight ret{0};
-
-        for (const auto &leg : unpacked_path_segments)
-            for (const auto &segment : leg)
-                ret += segment.duration_until_turn;
-
+        for (const auto &leg : unpacked_path_segments) {
+	        for (const auto &segment : leg) {
+		        ret += segment.duration_until_turn;
+	        }
+		}
         return ret;
     }
 };
@@ -129,10 +133,8 @@ inline InternalRouteResult CollapseInternalRouteResult(const InternalRouteResult
             // save new phantom node pair
             collapsed.segment_end_coordinates.push_back(leggy_result.segment_end_coordinates[i]);
             // save data about phantom nodes
-            collapsed.source_traversed_in_reverse.push_back(
-                leggy_result.source_traversed_in_reverse[i]);
-            collapsed.target_traversed_in_reverse.push_back(
-                leggy_result.target_traversed_in_reverse[i]);
+            collapsed.source_traversed_in_reverse.push_back(leggy_result.source_traversed_in_reverse[i]);
+            collapsed.target_traversed_in_reverse.push_back(leggy_result.target_traversed_in_reverse[i]);
         }
         else
         // no new leg, collapse the next segment into the last leg
@@ -140,10 +142,8 @@ inline InternalRouteResult CollapseInternalRouteResult(const InternalRouteResult
             BOOST_ASSERT(!collapsed.unpacked_path_segments.empty());
             auto &last_segment = collapsed.unpacked_path_segments.back();
             BOOST_ASSERT(!collapsed.segment_end_coordinates.empty());
-            collapsed.segment_end_coordinates.back().target_phantom =
-                leggy_result.segment_end_coordinates[i].target_phantom;
-            collapsed.target_traversed_in_reverse.back() =
-                leggy_result.target_traversed_in_reverse[i];
+            collapsed.segment_end_coordinates.back().target_phantom = leggy_result.segment_end_coordinates[i].target_phantom;
+            collapsed.target_traversed_in_reverse.back() = leggy_result.target_traversed_in_reverse[i];
             // copy path segments into current leg
             if (!leggy_result.unpacked_path_segments[i].empty())
             {
@@ -152,25 +152,26 @@ inline InternalRouteResult CollapseInternalRouteResult(const InternalRouteResult
                                     leggy_result.unpacked_path_segments[i].begin(),
                                     leggy_result.unpacked_path_segments[i].end());
 
-                // The first segment of the unpacked path is missing the weight of the
-                // source phantom.  We need to add those values back so that the total
-                // edge weight is correct
-                last_segment[old_size].weight_until_turn +=
 
-                    leggy_result.source_traversed_in_reverse[i]
-                        ? leggy_result.segment_end_coordinates[i].source_phantom.reverse_weight
-                        : leggy_result.segment_end_coordinates[i].source_phantom.forward_weight;
-
-                last_segment[old_size].duration_until_turn +=
-                    leggy_result.source_traversed_in_reverse[i]
-                        ? leggy_result.segment_end_coordinates[i].source_phantom.reverse_duration
-                        : leggy_result.segment_end_coordinates[i].source_phantom.forward_duration;
+	            // The first segment of the unpacked path is missing the weight of the
+	            // source phantom.  We need to add those values back so that the total
+	            // edge weight is correct
+	            if (leggy_result.source_traversed_in_reverse[i]) {
+					last_segment[old_size].weight_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_weight;
+		            last_segment[old_size].duration_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_duration;
+					last_segment[old_size].driving_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_driving_factor;
+					last_segment[old_size].resistance_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_resistance_factor;
+				} else {
+		            last_segment[old_size].weight_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_weight;
+		            last_segment[old_size].duration_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_duration;
+		            last_segment[old_size].driving_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_driving_factor;
+		            last_segment[old_size].resistance_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_resistance_factor;
+				}
             }
         }
     }
 
-    BOOST_ASSERT(collapsed.segment_end_coordinates.size() ==
-                 collapsed.unpacked_path_segments.size());
+    BOOST_ASSERT(collapsed.segment_end_coordinates.size() == collapsed.unpacked_path_segments.size());
     return collapsed;
 }
 } // namespace engine

@@ -164,8 +164,7 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
     if (parsed_way.forward_travel_mode != extractor::TRAVEL_MODE_INACCESSIBLE)
     {
         BOOST_ASSERT(parsed_way.duration > 0 || parsed_way.forward_speed > 0);
-        forward_duration_data =
-            toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.forward_speed / 3.6);
+        forward_duration_data = toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.forward_speed / 3.6);
         // fallback to duration as weight
         if (fallback_to_duration)
         {
@@ -174,15 +173,13 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         else
         {
             BOOST_ASSERT(parsed_way.weight > 0 || parsed_way.forward_rate > 0);
-            forward_weight_data =
-                toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.forward_rate);
+            forward_weight_data = toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.forward_rate);
         }
     }
     if (parsed_way.backward_travel_mode != extractor::TRAVEL_MODE_INACCESSIBLE)
     {
         BOOST_ASSERT(parsed_way.duration > 0 || parsed_way.backward_speed > 0);
-        backward_duration_data =
-            toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.backward_speed / 3.6);
+        backward_duration_data = toValueByEdgeOrByMeter(parsed_way.duration, parsed_way.backward_speed / 3.6);
         // fallback to duration as weight
         if (fallback_to_duration)
         {
@@ -191,8 +188,7 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         else
         {
             BOOST_ASSERT(parsed_way.weight > 0 || parsed_way.backward_rate > 0);
-            backward_weight_data =
-                toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.backward_rate);
+            backward_weight_data = toValueByEdgeOrByMeter(parsed_way.weight, parsed_way.backward_rate);
         }
     }
 
@@ -202,8 +198,7 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         {
             if (classes_map.size() > MAX_CLASS_INDEX)
             {
-                throw util::exception("Maximum number of classes is " +
-                                      std::to_string(MAX_CLASS_INDEX + 1));
+                throw util::exception("Maximum number of classes is " + std::to_string(MAX_CLASS_INDEX + 1));
             }
             ClassData class_mask = getClassData(classes_map.size());
             classes_map[class_name] = class_mask;
@@ -220,8 +215,7 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         {
             if (!isValidClassName(name_and_flag.first))
             {
-                throw util::exception("Invalid class name " + name_and_flag.first +
-                                      " only [a-Z0-9] allowed.");
+                throw util::exception("Invalid class name " + name_and_flag.first + " only [a-Z0-9] allowed.");
             }
 
             if (name_and_flag.second)
@@ -404,13 +398,15 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
         (parsed_way.backward_travel_mode != extractor::TRAVEL_MODE_INACCESSIBLE);
 
     // split an edge into two edges if forwards/backwards behavior differ
-    const bool split_edge =
+    const bool split_edge2 =
         in_forward_direction && in_backward_direction &&
         (force_split_edges || (parsed_way.forward_rate != parsed_way.backward_rate) ||
          (parsed_way.forward_speed != parsed_way.backward_speed) ||
          (parsed_way.forward_travel_mode != parsed_way.backward_travel_mode) ||
          (turn_lane_id_forward != turn_lane_id_backward) || (forward_classes != backward_classes) ||
          (parsed_way.forward_ref != parsed_way.backward_ref));
+//	 We need to split because consumption normally is different between forward and backwards
+	const bool split_edge = true;
 
     if (in_forward_direction)
     { // add (forward) segments or (forward,backward) for non-split edges in backward direction
@@ -425,9 +421,11 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
                 NodeBasedEdgeWithOSM edge = {
                     OSMNodeID{static_cast<std::uint64_t>(first_node.ref())},
                     OSMNodeID{static_cast<std::uint64_t>(last_node.ref())},
-                    0,  // weight
-                    0,  // duration
-                    0,  // distance
+                    0,       // weight
+                    0,      // duration
+                    0,      // distance
+					0,   // driving factor
+					0, // resistance factor
                     {}, // geometry id
                     static_cast<AnnotationID>(annotation_data_id),
                     {true,
@@ -442,11 +440,11 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
                      parsed_way.access_turn_classification}};
 
                 external_memory.all_edges_list.push_back(InternalExtractorEdge(
-                    std::move(edge), forward_weight_data, forward_duration_data, {}));
+                    std::move(edge), forward_weight_data, forward_duration_data, parsed_way.forward_speed, {}));
             });
     }
-
-    if (in_backward_direction && (!in_forward_direction || split_edge))
+	// For the consumption we need to split each edge as nearly all edges have a different consumption on the forward vs the reverse way
+    if (in_backward_direction)
     { // add (backward) segments for split edges or not in forward direction
         const auto annotation_data_id = external_memory.all_edges_annotation_data_list.size();
         external_memory.all_edges_annotation_data_list.push_back({backward_name_id,
@@ -459,9 +457,11 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
                 NodeBasedEdgeWithOSM edge = {
                     OSMNodeID{static_cast<std::uint64_t>(first_node.ref())},
                     OSMNodeID{static_cast<std::uint64_t>(last_node.ref())},
-                    0,  // weight
-                    0,  // duration
-                    0,  // distance
+                    0,       // weight
+                    0,      // duration
+                    0,      // distance
+					0,  // driving factor
+					0,  // resistance factor
                     {}, // geometry id
                     static_cast<AnnotationID>(annotation_data_id),
                     {false,
@@ -476,7 +476,7 @@ void ExtractorCallbacks::ProcessWay(const osmium::Way &input_way, const Extracti
                      parsed_way.access_turn_classification}};
 
                 external_memory.all_edges_list.push_back(InternalExtractorEdge(
-                    std::move(edge), backward_weight_data, backward_duration_data, {}));
+                    std::move(edge), backward_weight_data, backward_duration_data, parsed_way.backward_speed, {}));
             });
     }
 

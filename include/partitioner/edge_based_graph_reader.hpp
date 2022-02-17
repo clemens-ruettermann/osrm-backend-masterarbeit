@@ -44,6 +44,8 @@ splitBidirectionalEdges(const std::vector<extractor::EdgeBasedEdge> &edges)
                               std::max(edge.data.weight, 1),
                               edge.data.duration,
                               edge.data.distance,
+							  edge.data.driving_factor,
+							  edge.data.resistance_factor,
                               edge.data.forward,
                               edge.data.backward);
 
@@ -53,6 +55,8 @@ splitBidirectionalEdges(const std::vector<extractor::EdgeBasedEdge> &edges)
                               std::max(edge.data.weight, 1),
                               edge.data.duration,
                               edge.data.distance,
+                              edge.data.driving_factor,
+                              edge.data.resistance_factor,
                               edge.data.backward,
                               edge.data.forward);
     }

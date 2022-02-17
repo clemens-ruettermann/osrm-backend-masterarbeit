@@ -388,14 +388,15 @@ BOOST_AUTO_TEST_CASE(valid_route_urls)
     reference_speed.coordinates = coords_1;
     auto result_speed =
         parseParameters<RouteParameters>("1,2;3,4?geometries=polyline&"
-                                         "overview=simplified&annotations=duration,distance,speed");
+                                         "overview=simplified&annotations=duration,distance,speed,consumption");
     BOOST_CHECK(result_speed);
     BOOST_CHECK_EQUAL(reference_speed.geometries, result_speed->geometries);
     BOOST_CHECK_EQUAL(reference_speed.overview, result_speed->overview);
     BOOST_CHECK_EQUAL(result_speed->annotations_type ==
                           (RouteParameters::AnnotationsType::Duration |
                            RouteParameters::AnnotationsType::Distance |
-                           RouteParameters::AnnotationsType::Speed),
+                           RouteParameters::AnnotationsType::Speed |
+						   RouteParameters::AnnotationsType::Consumption),
                       true);
     BOOST_CHECK_EQUAL(result_speed->annotations, true);
 
@@ -750,6 +751,21 @@ BOOST_AUTO_TEST_CASE(valid_tile_urls)
     BOOST_CHECK_EQUAL(reference_1.z, result_1->z);
 }
 
+BOOST_AUTO_TEST_CASE(test_ev_parameters) {
+	TableParameters reference_6{};
+	reference_6.coordinates = coords_1;
+	auto result_11 = parseParameters<TableParameters>("1,2;3,4?sources=all&destinations=all&"
+	                                                  "annotations=duration&fallback_speed=1&"
+	                                                  "fallback_coordinate=snapped&scale_factor=2");
+	BOOST_CHECK(result_11);
+	CHECK_EQUAL_RANGE(reference_1.sources, result_11->sources);
+	CHECK_EQUAL_RANGE(reference_1.destinations, result_11->destinations);
+	CHECK_EQUAL_RANGE(reference_1.bearings, result_11->bearings);
+	CHECK_EQUAL_RANGE(reference_1.radiuses, result_11->radiuses);
+	CHECK_EQUAL_RANGE(reference_1.approaches, result_11->approaches);
+	CHECK_EQUAL_RANGE(reference_1.coordinates, result_11->coordinates);
+}
+
 BOOST_AUTO_TEST_CASE(valid_trip_urls)
 {
     std::vector<util::Coordinate> coords_1 = {{util::FloatLongitude{1}, util::FloatLatitude{2}},
@@ -796,6 +812,60 @@ BOOST_AUTO_TEST_CASE(valid_trip_urls)
     BOOST_CHECK_EQUAL(param_fail_1, 15UL);
     auto param_fail_2 = testInvalidOptions<TripParameters>("1,2;3,4?source=first&destination=nah");
     BOOST_CHECK_EQUAL(param_fail_2, 33UL);
+}
+
+
+
+
+BOOST_AUTO_TEST_CASE(valid_ev_urls)
+{
+	util::Coordinate start = {util::FloatLongitude{1}, util::FloatLatitude{2}};
+	util::Coordinate end = {util::FloatLongitude{3}, util::FloatLatitude{4}};
+
+	EVRouteParameters reference_1{};
+	reference_1.start = start;
+	reference_1.end = end;
+	auto result_1 = parseParameters<EVRouteParameters>("1,2;3,4");
+	BOOST_CHECK(result_1);
+	BOOST_CHECK(!result_1->IsValid());
+	BOOST_CHECK_EQUAL(reference_1.search_radius, result_1->search_radius);
+	BOOST_CHECK_EQUAL(reference_1.upper_capacity_limit, result_1->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_1.lower_capacity_limit, result_1->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_1.start, result_1->start);
+	BOOST_CHECK_EQUAL(reference_1.end, result_1->end);
+
+	EVRouteParameters reference_2{};
+	reference_2.start = start;
+	reference_2.end = end;
+	reference_2.search_radius = 1234;
+	auto result_2 = parseParameters<EVRouteParameters>("1,2;3,4?search_radius=1234");
+	BOOST_CHECK(result_2);
+	BOOST_CHECK(!result_2->IsValid());
+	BOOST_CHECK_EQUAL(reference_2.search_radius, result_2->search_radius);
+	BOOST_CHECK_EQUAL(reference_2.upper_capacity_limit, result_2->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_2.lower_capacity_limit, result_2->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_2.start, result_2->start);
+	BOOST_CHECK_EQUAL(reference_2.end, result_2->end);
+
+
+	EVRouteParameters reference_3{};
+	reference_3.start = start;
+	reference_3.end = end;
+	reference_3.search_radius = 1234;
+	reference_3.wltp = 18.3;
+	reference_3.weight = 2345;
+	reference_3.battery_capacity = 77;
+	reference_3.upper_capacity_limit = std::lround(reference_3.battery_capacity * 0.75 * 1000000);
+	reference_3.lower_capacity_limit = std::lround(reference_3.battery_capacity * 0.5 * 1000000);
+
+	auto result_3 = parseParameters<EVRouteParameters>("1,2;3,4?search_radius=1234&battery_capacity=77&lower_capacity_limit=50&upper_capacity_limit=75&wltp=18.3&weight=2345");
+	BOOST_CHECK(result_3);
+	BOOST_CHECK(result_3->IsValid());
+	BOOST_CHECK_EQUAL(reference_3.search_radius, result_3->search_radius);
+	BOOST_CHECK_EQUAL(reference_3.upper_capacity_limit, result_3->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_3.lower_capacity_limit, result_3->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_3.start, result_3->start);
+	BOOST_CHECK_EQUAL(reference_3.end, result_3->end);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

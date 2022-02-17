@@ -84,8 +84,7 @@ struct ContractionStats
     int original_edges_deleted_count;
     int original_edges_added_count;
     ContractionStats()
-        : edges_deleted_count(0), edges_added_count(0), original_edges_deleted_count(0),
-          original_edges_added_count(0)
+        : edges_deleted_count(0), edges_added_count(0), original_edges_deleted_count(0), original_edges_added_count(0)
     {
     }
 };
@@ -115,8 +114,7 @@ struct ThreadDataContainer
     }
 
     int number_of_nodes;
-    using EnumerableThreadData =
-        tbb::enumerable_thread_specific<std::shared_ptr<ContractorThreadData>>;
+    using EnumerableThreadData = tbb::enumerable_thread_specific<std::shared_ptr<ContractorThreadData>>;
     EnumerableThreadData data;
 };
 
@@ -154,6 +152,9 @@ void ContractNode(ContractorThreadData *data,
     for (auto in_edge : graph.GetAdjacentEdgeRange(node))
     {
         const ContractorEdgeData &in_data = graph.GetEdgeData(in_edge);
+#ifdef NON_ZERO_CONSUMPTION
+		BOOST_ASSERT(in_data.consumption != 0);
+#endif
         const NodeID source = graph.GetTarget(in_edge);
         if (source == node)
             continue;
@@ -211,27 +212,39 @@ void ContractNode(ContractorThreadData *data,
                         // guarantees that source is not connected to another node that is
                         // contracted
                         node_weights[source] = path_weight; // make sure to prune better
-                        inserted_edges.emplace_back(source,
+
+						EdgeDuration new_duration = in_data.duration + out_data.duration;
+						EdgeDistance new_distance = in_data.distance + out_data.distance;
+	                    unsigned new_original_edges = out_data.originalEdges + in_data.originalEdges;
+						EdgeDrivingFactor new_driving_factor = in_data.driving_factor + out_data.driving_factor;
+						EdgeResistanceFactor new_resistance_factor = in_data.resistance_factor + out_data.resistance_factor;
+
+                        auto new_edge1 = inserted_edges.emplace_back(ContractorEdge{source,
                                                     target,
                                                     path_weight,
-                                                    in_data.duration + out_data.duration,
-                                                    in_data.distance + out_data.distance,
-                                                    out_data.originalEdges + in_data.originalEdges,
+													new_duration,
+													new_distance,
+													new_driving_factor,
+													new_resistance_factor,
+													new_original_edges,
                                                     node,
                                                     SHORTCUT_ARC,
                                                     FORWARD_DIRECTION_ENABLED,
-                                                    REVERSE_DIRECTION_DISABLED);
+                                                    REVERSE_DIRECTION_DISABLED});
 
-                        inserted_edges.emplace_back(target,
+                        auto new_edge2 = inserted_edges.emplace_back(ContractorEdge{target,
                                                     source,
                                                     path_weight,
-                                                    in_data.duration + out_data.duration,
-                                                    in_data.distance + out_data.distance,
-                                                    out_data.originalEdges + in_data.originalEdges,
+													new_duration,
+													new_distance,
+													new_driving_factor,
+													new_resistance_factor,
+													new_original_edges,
                                                     node,
                                                     SHORTCUT_ARC,
                                                     FORWARD_DIRECTION_DISABLED,
-                                                    REVERSE_DIRECTION_ENABLED);
+                                                    REVERSE_DIRECTION_ENABLED});
+
                     }
                 }
                 continue;
@@ -273,32 +286,42 @@ void ContractNode(ContractorThreadData *data,
                 {
                     BOOST_ASSERT(stats != nullptr);
                     stats->edges_added_count += 2;
-                    stats->original_edges_added_count +=
-                        2 * (out_data.originalEdges + in_data.originalEdges);
+                    stats->original_edges_added_count += 2 * (out_data.originalEdges + in_data.originalEdges);
                 }
                 else
                 {
-                    inserted_edges.emplace_back(source,
+					EdgeDistance new_distance = in_data.distance + out_data.distance;
+					EdgeDuration new_duration = in_data.duration + out_data.duration;
+					unsigned new_original_edges = out_data.originalEdges + in_data.originalEdges;
+					EdgeDrivingFactor new_driving_factor = in_data.driving_factor + out_data.driving_factor;
+					EdgeResistanceFactor new_resistance_factor = in_data.resistance_factor + out_data.resistance_factor;
+                    auto new_edge1 = inserted_edges.emplace_back(ContractorEdge{source,
                                                 target,
                                                 path_weight,
-                                                in_data.duration + out_data.duration,
-                                                in_data.distance + out_data.distance,
-                                                out_data.originalEdges + in_data.originalEdges,
+                                                new_duration,
+                                                new_distance,
+												new_driving_factor,
+												new_resistance_factor,
+												new_original_edges,
                                                 node,
                                                 SHORTCUT_ARC,
                                                 FORWARD_DIRECTION_ENABLED,
-                                                REVERSE_DIRECTION_DISABLED);
+                                                REVERSE_DIRECTION_DISABLED});
 
-                    inserted_edges.emplace_back(target,
+
+                    auto new_edge2 = inserted_edges.emplace_back(ContractorEdge{target,
                                                 source,
                                                 path_weight,
-                                                in_data.duration + out_data.duration,
-                                                in_data.distance + out_data.distance,
-                                                out_data.originalEdges + in_data.originalEdges,
+                                                new_duration,
+                                                new_distance,
+												new_driving_factor,
+												new_resistance_factor,
+												new_original_edges,
                                                 node,
                                                 SHORTCUT_ARC,
                                                 FORWARD_DIRECTION_DISABLED,
-                                                REVERSE_DIRECTION_ENABLED);
+                                                REVERSE_DIRECTION_ENABLED});
+
                 }
             }
         }
@@ -370,6 +393,9 @@ void RenumberGraph(ContractorGraph &graph, const std::vector<NodeID> &old_to_new
         for (const auto edge : graph.GetAdjacentEdgeRange(node))
         {
             auto &data = graph.GetEdgeData(edge);
+#ifdef NON_ZERO_CONSUMPTION
+			BOOST_ASSERT(data.consumption != 0);
+#endif
             if (data.shortcut)
             {
                 data.id = old_to_new[data.id];
@@ -607,8 +633,7 @@ std::vector<bool> contractGraph(ContractorGraph &graph,
             }
             else
             {
-                node_data.priorities[node] =
-                    std::numeric_limits<ContractorNodeData::NodePriority>::max();
+                node_data.priorities[node] = std::numeric_limits<ContractorNodeData::NodePriority>::max();
             }
         }
         else
@@ -634,6 +659,19 @@ std::vector<bool> contractGraph(ContractorGraph &graph,
                           });
         log << " ok.";
     }
+#ifdef NON_ZERO_CONSUMPTION
+	{
+		for (const auto node : util::irange(0u, number_of_nodes))
+		{
+			for (auto edge : graph.GetAdjacentEdgeRange(node))
+			{
+				const auto &data = graph.GetEdgeData(edge);
+				BOOST_ASSERT(data.consumption != 0);
+			}
+		}
+	}
+#endif
+
 
     auto number_of_core_nodes = std::max<std::size_t>(0, (1 - core_factor) * number_of_nodes);
     auto number_of_nodes_to_contract = remaining_nodes.size() - number_of_core_nodes;
@@ -665,16 +703,15 @@ std::vector<bool> contractGraph(ContractorGraph &graph,
                 for (auto i = range.begin(), end = range.end(); i != end; ++i)
                 {
                     const NodeID node = remaining_nodes[i].id;
-                    remaining_nodes[i].is_independent = IsNodeIndependent(
-                        hash, node_data.priorities, new_to_old_node_id, graph, data, node);
+                    remaining_nodes[i].is_independent = IsNodeIndependent(hash, node_data.priorities, new_to_old_node_id, graph, data, node);
                 }
             });
 
         // sort all remaining nodes to the beginning of the sequence
-        const auto begin_independent_nodes =
-            stable_partition(remaining_nodes.begin(),
-                             remaining_nodes.end(),
-                             [](RemainingNodeData node_data) { return !node_data.is_independent; });
+        const auto begin_independent_nodes = std::stable_partition(
+            remaining_nodes.begin(), remaining_nodes.end(), [](RemainingNodeData node_data) {
+                return !node_data.is_independent;
+            });
         auto begin_independent_nodes_idx =
             std::distance(remaining_nodes.begin(), begin_independent_nodes);
         auto end_independent_nodes_idx = remaining_nodes.size();
@@ -726,8 +763,10 @@ std::vector<bool> contractGraph(ContractorGraph &graph,
                 if (current_edge_ID != SPECIAL_EDGEID)
                 {
                     auto &current_data = graph.GetEdgeData(current_edge_ID);
-                    if (current_data.shortcut && edge.data.forward == current_data.forward &&
-                        edge.data.backward == current_data.backward)
+#ifdef NON_ZERO_CONSUMPTION
+	                BOOST_ASSERT(current_data.consumption != 0 && current_data.consumption != INVALID_EDGE_CONSUMPTION);
+#endif
+                    if (current_data.shortcut && edge.data.forward == current_data.forward && edge.data.backward == current_data.backward)
                     {
                         // found a duplicate edge with smaller weight, update it.
                         if (edge.data.weight < current_data.weight)

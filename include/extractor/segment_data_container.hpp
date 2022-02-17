@@ -58,6 +58,8 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
     using SegmentNodeVector = Vector<NodeID>;
     using SegmentWeightVector = PackedVector<SegmentWeight, SEGMENT_WEIGHT_BITS>;
     using SegmentDurationVector = PackedVector<SegmentDuration, SEGMENT_DURATION_BITS>;
+	using SegmentDrivingFactorVector = Vector<SegmentDrivingFactor>;
+	using SegmentResistanceFactorVector = Vector<SegmentResistanceFactor>;
     using SegmentDatasourceVector = Vector<DatasourceID>;
 
     SegmentDataContainerImpl() = default;
@@ -68,11 +70,23 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
                              SegmentWeightVector rev_weights_,
                              SegmentDurationVector fwd_durations_,
                              SegmentDurationVector rev_durations_,
+                             SegmentDrivingFactorVector fwd_driving_factors_,
+                             SegmentDrivingFactorVector rev_driving_factors_,
+                             SegmentResistanceFactorVector fwd_resistance_factors_,
+                             SegmentResistanceFactorVector rev_resistance_factors_,
                              SegmentDatasourceVector fwd_datasources_,
                              SegmentDatasourceVector rev_datasources_)
-        : index(std::move(index_)), nodes(std::move(nodes_)), fwd_weights(std::move(fwd_weights_)),
-          rev_weights(std::move(rev_weights_)), fwd_durations(std::move(fwd_durations_)),
-          rev_durations(std::move(rev_durations_)), fwd_datasources(std::move(fwd_datasources_)),
+        : index(std::move(index_)),
+		  nodes(std::move(nodes_)),
+		  fwd_weights(std::move(fwd_weights_)),
+          rev_weights(std::move(rev_weights_)),
+		  fwd_durations(std::move(fwd_durations_)),
+          rev_durations(std::move(rev_durations_)),
+		  fwd_driving_factors(std::move(fwd_driving_factors_)),
+		  rev_driving_factors(std::move(rev_driving_factors_)),
+		  fwd_resistance_factors(std::move(fwd_resistance_factors_)),
+		  rev_resistance_factors(std::move(rev_resistance_factors_)),
+		  fwd_datasources(std::move(fwd_datasources_)),
           rev_datasources(std::move(rev_datasources_))
     {
     }
@@ -121,6 +135,38 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
 
         return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
     }
+
+	auto GetForwardDrivingFactors(const DirectionalGeometryID id)
+	{
+		const auto begin = fwd_driving_factors.begin() + index[id] + 1;
+		const auto end = fwd_driving_factors.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
+	auto GetReverseDrivingFactors(const DirectionalGeometryID id)
+	{
+		const auto begin = rev_driving_factors.begin() + index[id] + 1;
+		const auto end = rev_driving_factors.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
+	auto GetForwardResistanceFactors(const DirectionalGeometryID id)
+	{
+		const auto begin = fwd_resistance_factors.begin() + index[id] + 1;
+		const auto end = fwd_resistance_factors.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
+	auto GetReverseResistanceFactors(const DirectionalGeometryID id)
+	{
+		const auto begin = rev_resistance_factors.begin() + index[id] + 1;
+		const auto end = rev_resistance_factors.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
 
     auto GetForwardDatasources(const DirectionalGeometryID id)
     {
@@ -183,6 +229,40 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
         return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
     }
 
+
+	auto GetForwardDrivingFactors(const DirectionalGeometryID id) const
+	{
+		const auto begin = fwd_driving_factors.cbegin() + index[id] + 1;
+		const auto end = fwd_driving_factors.cbegin() + index[id + 1];
+
+		return boost::make_iterator_range(begin, end);
+	}
+
+	auto GetReverseDrivingFactors(const DirectionalGeometryID id) const
+	{
+		const auto begin = rev_driving_factors.cbegin() + index[id];
+		const auto end = rev_driving_factors.cbegin() + index[id + 1] - 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
+
+	auto GetForwardResistanceFactors(const DirectionalGeometryID id) const
+	{
+		const auto begin = fwd_resistance_factors.cbegin() + index[id] + 1;
+		const auto end = fwd_resistance_factors.cbegin() + index[id + 1];
+
+		return boost::make_iterator_range(begin, end);
+	}
+
+	auto GetReverseResistanceFactors(const DirectionalGeometryID id) const
+	{
+		const auto begin = rev_resistance_factors.cbegin() + index[id];
+		const auto end = rev_resistance_factors.cbegin() + index[id + 1] - 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
     auto GetForwardDatasources(const DirectionalGeometryID id) const
     {
         const auto begin = fwd_datasources.cbegin() + index[id] + 1;
@@ -218,6 +298,10 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
     SegmentWeightVector rev_weights;
     SegmentDurationVector fwd_durations;
     SegmentDurationVector rev_durations;
+	SegmentDrivingFactorVector fwd_driving_factors;
+	SegmentDrivingFactorVector rev_driving_factors;
+	SegmentResistanceFactorVector fwd_resistance_factors;
+	SegmentResistanceFactorVector rev_resistance_factors;
     SegmentDatasourceVector fwd_datasources;
     SegmentDatasourceVector rev_datasources;
 };

@@ -74,7 +74,9 @@ struct TableParameters : public BaseParameters
         None = 0,
         Duration = 0x01,
         Distance = 0x02,
-        All = Duration | Distance
+		Consumption = 0x03,
+		//TODO FIXME KENSPECKLE NOT IMPORTANT Consumption in TableRequest einbauen
+        All = Duration | Distance | Consumption
     };
 
     AnnotationsType annotations = AnnotationsType::Duration;

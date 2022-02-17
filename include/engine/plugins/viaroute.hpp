@@ -7,6 +7,7 @@
 #include "engine/routing_algorithms.hpp"
 
 #include "util/json_container.hpp"
+#include "engine/guidance/leg_geometry.hpp"
 
 #include <cstdlib>
 
@@ -34,6 +35,31 @@ class ViaRoutePlugin final : public BasePlugin
     Status HandleRequest(const RoutingAlgorithmsInterface &algorithms,
                          const api::RouteParameters &route_parameters,
                          osrm::engine::api::ResultT &json_result) const;
+
+	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
+	                       const std::vector<util::Coordinate> &coords,
+						   std::vector<guidance::LegGeometry> & result) const;
+
+	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
+	                       const std::vector<PhantomNodePair> &phantom_nodes,
+	                       std::vector<guidance::LegGeometry> & result,
+						   std::int64_t & last_route_consumption,
+						   double wltp,
+						   double weight) const;
+
+	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
+	                       const std::vector<util::Coordinate> &coords,
+	                       util::json::Object &json_result) const;
+
+	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
+	                       const std::vector<PhantomNodePair> &phantom_nodes,
+	                       util::json::Object &json_result) const;
+
+
+
+
+
+
 };
 } // namespace plugins
 } // namespace engine

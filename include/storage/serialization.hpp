@@ -10,7 +10,7 @@
 #include "storage/tar.hpp"
 
 #include <boost/assert.hpp>
-#include <boost/function_output_iterator.hpp>
+#include <boost/iterator/function_output_iterator.hpp>
 #include <boost/iterator/function_input_iterator.hpp>
 
 #include <cmath>
@@ -26,6 +26,7 @@ namespace serialization
 
 namespace detail
 {
+
 template <typename T, typename BlockT = unsigned char>
 inline BlockT packBits(const T &data, std::size_t base_index, const std::size_t count)
 {

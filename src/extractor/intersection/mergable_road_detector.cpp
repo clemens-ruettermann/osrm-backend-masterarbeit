@@ -164,8 +164,7 @@ bool MergableRoadDetector::EdgeDataSupportsMerge(
     return lhs_flags.road_classification == rhs_flags.road_classification;
 }
 
-bool MergableRoadDetector::IsTrafficLoop(const NodeID intersection_node,
-                                         const MergableRoadData &road) const
+bool MergableRoadDetector::IsTrafficLoop(const NodeID intersection_node, const MergableRoadData &road) const
 {
     const auto connection =
         intersection::skipDegreeTwoNodes(node_based_graph, {intersection_node, road.eid});

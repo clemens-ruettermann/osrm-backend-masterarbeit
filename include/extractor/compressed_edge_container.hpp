@@ -24,6 +24,12 @@ class CompressedEdgeContainer
         NodeID node_id;           // refers to an internal node-based-node
         SegmentWeight weight;     // the weight of the edge leading to this node
         SegmentDuration duration; // the duration of the edge leading to this node
+		SegmentDrivingFactor driving_factor;
+		SegmentResistanceFactor resistance_factor;
+
+    public:
+		OnewayCompressedEdge(const NodeID node_id, SegmentWeight weight, SegmentDuration duration, SegmentDrivingFactor driving_factor, SegmentResistanceFactor resistance_factor)
+			: node_id(node_id), weight(weight), duration(duration), driving_factor(driving_factor), resistance_factor(resistance_factor) {}
     };
 
     using OnewayEdgeBucket = std::vector<OnewayCompressedEdge>;
@@ -37,6 +43,10 @@ class CompressedEdgeContainer
                       const EdgeWeight weight2,
                       const EdgeDuration duration1,
                       const EdgeDuration duration2,
+					  const EdgeDrivingFactor driving_factor1,
+					  const EdgeDrivingFactor driving_factor2,
+					  const EdgeResistanceFactor resistance_factor1,
+					  const EdgeResistanceFactor resistance_factor2,
                       // node-penalties can be added before/or after the traversal of an edge which
                       // depends on whether we traverse the link forwards or backwards.
                       const EdgeWeight node_weight_penalty = INVALID_EDGE_WEIGHT,
@@ -45,7 +55,9 @@ class CompressedEdgeContainer
     void AddUncompressedEdge(const EdgeID edge_id,
                              const NodeID target_node,
                              const SegmentWeight weight,
-                             const SegmentWeight duration);
+                             const SegmentWeight duration,
+							 const SegmentDrivingFactor driving_factor,
+							 const SegmentResistanceFactor resistance_factor);
 
     void InitializeBothwayVector();
     unsigned ZipEdges(const unsigned f_edge_pos, const unsigned r_edge_pos);
@@ -73,6 +85,7 @@ class CompressedEdgeContainer
     int free_list_maximum = 0;
     std::atomic_size_t clipped_weights{0};
     std::atomic_size_t clipped_durations{0};
+	std::atomic_size_t clipped_consumption{0};
 
     void IncreaseFreeList();
     std::vector<OnewayEdgeBucket> m_compressed_oneway_geometries;

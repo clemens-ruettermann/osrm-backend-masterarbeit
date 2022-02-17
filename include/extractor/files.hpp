@@ -61,10 +61,10 @@ inline void readIntersections(const boost::filesystem::path &path,
 inline void readProfileProperties(const boost::filesystem::path &path,
                                   ProfileProperties &properties)
 {
-    const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
-    storage::tar::FileReader reader{path, fingerprint};
+	const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
+	storage::tar::FileReader reader{path, fingerprint};
 
-    serialization::read(reader, "/common/properties", properties);
+	serialization::read(reader, "/common/properties", properties);
 }
 
 // writes .osrm.properties
@@ -474,6 +474,12 @@ void readRawNBGraph(const boost::filesystem::path &path,
     reader.ReadStreaming<NodeID>("/extractor/traffic_lights", traffic_signals);
 
     storage::serialization::read(reader, "/extractor/edges", edge_list);
+#ifdef NON_ZERO_CONSUMPTION
+	for (const auto & it : edge_list) {
+		BOOST_ASSERT(it.consumption != 0);
+	}
+
+#endif
     storage::serialization::read(reader, "/extractor/annotations", annotations);
 }
 
@@ -514,11 +520,14 @@ void readEdgeBasedNodeDistances(const boost::filesystem::path &path,
     storage::serialization::read(reader, "/extractor/edge_based_node_distances", distances);
 }
 
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDistancesVectorT>
-void writeEdgeBasedNodeWeightsDurationsDistances(const boost::filesystem::path &path,
-                                                 const NodeWeightsVectorT &weights,
-                                                 const NodeDurationsVectorT &durations,
-                                                 const NodeDistancesVectorT &distances)
+
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDistancesVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
+void writeEdgeBasedNodeWeightsDurationsDistancesConsumptions(const boost::filesystem::path &path,
+                                                             const NodeWeightsVectorT &weights,
+                                                             const NodeDurationsVectorT &durations,
+                                                             const NodeDistancesVectorT &distances,
+															 const NodeDrivingFactorsVectorT &driving_factors,
+															 const NodeResistanceFactorsVectorT &resistance_factors)
 {
     const auto fingerprint = storage::tar::FileWriter::GenerateFingerprint;
     storage::tar::FileWriter writer{path, fingerprint};
@@ -526,30 +535,40 @@ void writeEdgeBasedNodeWeightsDurationsDistances(const boost::filesystem::path &
     storage::serialization::write(writer, "/extractor/edge_based_node_weights", weights);
     storage::serialization::write(writer, "/extractor/edge_based_node_durations", durations);
     storage::serialization::write(writer, "/extractor/edge_based_node_distances", distances);
+    storage::serialization::write(writer, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::write(writer, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT>
-void readEdgeBasedNodeWeightsDurations(const boost::filesystem::path &path,
-                                       NodeWeightsVectorT &weights,
-                                       NodeDurationsVectorT &durations)
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
+void readEdgeBasedNodeWeightsDurationsConsumptions(const boost::filesystem::path &path,
+                                                   NodeWeightsVectorT &weights,
+                                                   NodeDurationsVectorT &durations,
+												   NodeDrivingFactorsVectorT &driving_factors,
+												   NodeResistanceFactorsVectorT & resistance_factors)
 {
     const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
     storage::tar::FileReader reader{path, fingerprint};
 
     storage::serialization::read(reader, "/extractor/edge_based_node_weights", weights);
     storage::serialization::read(reader, "/extractor/edge_based_node_durations", durations);
+    storage::serialization::read(reader, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::read(reader, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT>
-void writeEdgeBasedNodeWeightsDurations(const boost::filesystem::path &path,
-                                        const NodeWeightsVectorT &weights,
-                                        const NodeDurationsVectorT &durations)
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
+void writeEdgeBasedNodeWeightsDurationsConsumptions(const boost::filesystem::path &path,
+                                                    const NodeWeightsVectorT &weights,
+                                                    const NodeDurationsVectorT &durations,
+													const NodeDrivingFactorsVectorT &driving_factors,
+													const NodeResistanceFactorsVectorT &resistance_factors)
 {
     const auto fingerprint = storage::tar::FileWriter::GenerateFingerprint;
     storage::tar::FileWriter writer{path, fingerprint};
 
     storage::serialization::write(writer, "/extractor/edge_based_node_weights", weights);
     storage::serialization::write(writer, "/extractor/edge_based_node_durations", durations);
+    storage::serialization::write(writer, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::write(writer, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
 template <typename RTreeT>
@@ -586,6 +605,7 @@ void readCompressedNodeBasedGraph(const boost::filesystem::path &path, EdgeListT
 
     storage::serialization::read(reader, "/extractor/cnbg", edge_list);
 }
+
 } // namespace files
 } // namespace extractor
 } // namespace osrm

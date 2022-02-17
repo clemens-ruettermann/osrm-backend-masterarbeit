@@ -6,6 +6,10 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <algorithm>
+
+#include <random>
+#include <sstream>
 
 namespace osrm
 {
@@ -125,6 +129,98 @@ inline std::size_t URIDecode(const std::string &input, std::string &output)
 }
 
 inline std::size_t URIDecodeInPlace(std::string &URI) { return URIDecode(URI, URI); }
+
+
+// trim from start (in place)
+static void ltrim(std::string &s) {
+	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+		return !std::isspace(ch);
+	}));
+}
+
+// trim from end (in place)
+static void rtrim(std::string &s) {
+	s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+		return !std::isspace(ch);
+	}).base(), s.end());
+}
+
+// trim from both ends (in place)
+static void trim(std::string &s) {
+	ltrim(s);
+	rtrim(s);
+}
+
+// trim from start (copying)
+static std::string ltrim_copy(std::string s) {
+	ltrim(s);
+	return s;
+}
+
+// trim from end (copying)
+static std::string rtrim_copy(std::string s) {
+	rtrim(s);
+	return s;
+}
+
+// trim from both ends (copying)
+static std::string trim_copy(std::string s) {
+	trim(s);
+	return s;
+}
+
+static std::string iso_8859_1_to_utf8(std::string &str)
+{
+	std::string strOut;
+	for (std::string::iterator it = str.begin(); it != str.end(); ++it)
+	{
+		uint8_t ch = *it;
+		if (ch < 0x80) {
+			strOut.push_back(ch);
+		}
+		else {
+			strOut.push_back(0xc0 | ch >> 6);
+			strOut.push_back(0x80 | (ch & 0x3f));
+		}
+	}
+	return strOut;
+}
+
+
+
+namespace uuid {
+static std::random_device              rd;
+static std::mt19937                    gen(rd());
+static std::uniform_int_distribution<> dis(0, 15);
+static std::uniform_int_distribution<> dis2(8, 11);
+
+static std::string generate_uuid_v4() {
+	std::stringstream ss;
+	int i;
+	ss << std::hex;
+	for (i = 0; i < 8; i++) {
+		ss << dis(gen);
+	}
+	ss << "-";
+	for (i = 0; i < 4; i++) {
+		ss << dis(gen);
+	}
+	ss << "-4";
+	for (i = 0; i < 3; i++) {
+		ss << dis(gen);
+	}
+	ss << "-";
+	ss << dis2(gen);
+	for (i = 0; i < 3; i++) {
+		ss << dis(gen);
+	}
+	ss << "-";
+	for (i = 0; i < 12; i++) {
+		ss << dis(gen);
+	};
+	return ss.str();
+}
+} // namespace uuid
 } // namespace util
 } // namespace osrm
 

@@ -73,19 +73,23 @@ template <storage::Ownership Ownership> class CellStorageImpl
 
     // Implementation of the cell view. We need a template parameter here
     // because we need to derive a read-only and read-write view from this.
-    template <typename WeightValueT, typename DurationValueT, typename DistanceValueT>
+    template <typename WeightValueT, typename DurationValueT, typename DistanceValueT, typename DrivingFactorValueT, typename ResistanceFactorValueT>
     class CellImpl
     {
       private:
         using WeightPtrT = WeightValueT *;
         using DurationPtrT = DurationValueT *;
         using DistancePtrT = DistanceValueT *;
+		using DrivingFactorPtrT = DrivingFactorValueT *;
+		using ResistanceFactorPtrT = ResistanceFactorValueT *;
         BoundarySize num_source_nodes;
         BoundarySize num_destination_nodes;
 
         WeightPtrT const weights;
         DurationPtrT const durations;
         DistancePtrT const distances;
+		DrivingFactorPtrT const driving_factors;
+		ResistanceFactorPtrT const resistance_factors;
         const NodeID *const source_boundary;
         const NodeID *const destination_boundary;
 
@@ -174,6 +178,14 @@ template <storage::Ownership Ownership> class CellStorageImpl
 
         auto GetOutDistance(NodeID node) const { return GetOutRange(distances, node); }
 
+		auto GetInDrivingFactor(NodeID node) const { return GetInRange(driving_factors, node); }
+
+		auto GetOutDrivingFactor(NodeID node) const { return GetOutRange(driving_factors, node); }
+
+	    auto GetInResistanceFactor(NodeID node) const { return GetInRange(resistance_factors, node); }
+
+	    auto GetOutResistanceFactor(NodeID node) const { return GetOutRange(resistance_factors, node); }
+
         auto GetSourceNodes() const
         {
             return boost::make_iterator_range(source_boundary, source_boundary + num_source_nodes);
@@ -189,19 +201,26 @@ template <storage::Ownership Ownership> class CellStorageImpl
                  WeightPtrT const all_weights,
                  DurationPtrT const all_durations,
                  DistancePtrT const all_distances,
+				 DrivingFactorPtrT const all_driving_factors,
+				 ResistanceFactorPtrT const all_resistance_factors,
                  const NodeID *const all_sources,
                  const NodeID *const all_destinations)
             : num_source_nodes{data.num_source_nodes},
-              num_destination_nodes{data.num_destination_nodes}, weights{all_weights +
-                                                                         data.value_offset},
-              durations{all_durations + data.value_offset}, distances{all_distances +
-                                                                      data.value_offset},
+              num_destination_nodes{data.num_destination_nodes},
+			  weights{all_weights + data.value_offset},
+              durations{all_durations + data.value_offset},
+			  distances{all_distances + data.value_offset},
+			  driving_factors{all_driving_factors + data.value_offset},
+			  resistance_factors{all_resistance_factors + data.value_offset},
               source_boundary{all_sources + data.source_boundary_offset},
               destination_boundary{all_destinations + data.destination_boundary_offset}
         {
             BOOST_ASSERT(all_weights != nullptr);
             BOOST_ASSERT(all_durations != nullptr);
             BOOST_ASSERT(all_distances != nullptr);
+            BOOST_ASSERT(all_driving_factors != nullptr);
+            BOOST_ASSERT(all_resistance_factors != nullptr);
+
             BOOST_ASSERT(num_source_nodes == 0 || all_sources != nullptr);
             BOOST_ASSERT(num_destination_nodes == 0 || all_destinations != nullptr);
         }
@@ -212,9 +231,13 @@ template <storage::Ownership Ownership> class CellStorageImpl
                  const NodeID *const all_sources,
                  const NodeID *const all_destinations)
             : num_source_nodes{data.num_source_nodes},
-              num_destination_nodes{data.num_destination_nodes}, weights{nullptr},
-              durations{nullptr}, distances{nullptr}, source_boundary{all_sources +
-                                                                      data.source_boundary_offset},
+              num_destination_nodes{data.num_destination_nodes},
+			  weights{nullptr},
+              durations{nullptr},
+			  distances{nullptr},
+			  driving_factors{nullptr},
+			  resistance_factors{nullptr},
+			  source_boundary{all_sources + data.source_boundary_offset},
               destination_boundary{all_destinations + data.destination_boundary_offset}
         {
             BOOST_ASSERT(num_source_nodes == 0 || all_sources != nullptr);
@@ -225,8 +248,8 @@ template <storage::Ownership Ownership> class CellStorageImpl
     std::size_t LevelIDToIndex(LevelID level) const { return level - 1; }
 
   public:
-    using Cell = CellImpl<EdgeWeight, EdgeDuration, EdgeDistance>;
-    using ConstCell = CellImpl<const EdgeWeight, const EdgeDuration, const EdgeDistance>;
+    using Cell = CellImpl<EdgeWeight, EdgeDuration, EdgeDistance, EdgeDrivingFactor, EdgeResistanceFactor>;
+    using ConstCell = CellImpl<const EdgeWeight, const EdgeDuration, const EdgeDistance, const EdgeDrivingFactor, const EdgeResistanceFactor>;
 
     CellStorageImpl() {}
 
@@ -375,6 +398,8 @@ template <storage::Ownership Ownership> class CellStorageImpl
         metric.weights.resize(total_size + 1, INVALID_EDGE_WEIGHT);
         metric.durations.resize(total_size + 1, MAXIMAL_EDGE_DURATION);
         metric.distances.resize(total_size + 1, INVALID_EDGE_DISTANCE);
+		metric.driving_factors.resize(total_size + 1, 0);
+		metric.resistance_factors.resize(total_size + 1, 0);
 
         return metric;
     }
@@ -403,6 +428,8 @@ template <storage::Ownership Ownership> class CellStorageImpl
                          metric.weights.data(),
                          metric.durations.data(),
                          metric.distances.data(),
+						 metric.driving_factors.data(),
+						 metric.resistance_factors.data(),
                          source_boundary.empty() ? nullptr : source_boundary.data(),
                          destination_boundary.empty() ? nullptr : destination_boundary.data()};
     }
@@ -431,6 +458,8 @@ template <storage::Ownership Ownership> class CellStorageImpl
                     metric.weights.data(),
                     metric.durations.data(),
                     metric.distances.data(),
+					metric.driving_factors.data(),
+					metric.resistance_factors.data(),
                     source_boundary.data(),
                     destination_boundary.data()};
     }

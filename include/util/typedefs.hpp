@@ -69,6 +69,8 @@ static const OSMNodeID MIN_OSM_NODEID =
 static const OSMWayID MAX_OSM_WAYID = OSMWayID{std::numeric_limits<OSMWayID::value_type>::max()};
 static const OSMWayID MIN_OSM_WAYID = OSMWayID{std::numeric_limits<OSMWayID::value_type>::min()};
 
+using ChargerId = std::uint32_t;
+
 using NodeID = std::uint32_t;
 using EdgeID = std::uint32_t;
 using NameID = std::uint32_t;
@@ -76,8 +78,15 @@ using AnnotationID = std::uint32_t;
 using EdgeWeight = std::int32_t;
 using EdgeDuration = std::int32_t;
 using EdgeDistance = float;
+// Consumption is the value in milli Watt to save space (a double would use 16 byte in node_based_edge probablity due to alginment issues)
+// and simplify the calculation
 using SegmentWeight = std::uint32_t;
 using SegmentDuration = std::uint32_t;
+//using SegmentConsumption = std::int32_t;
+using EdgeDrivingFactor = double;
+using SegmentDrivingFactor = double;
+using SegmentResistanceFactor = double;
+using EdgeResistanceFactor = double;
 using TurnPenalty = std::int16_t; // turn penalty in 100ms units
 using DataTimestamp = std::string;
 
@@ -109,6 +118,8 @@ static const NameID EMPTY_NAMEID = 0;
 static const unsigned INVALID_COMPONENTID = 0;
 static const std::size_t SEGMENT_WEIGHT_BITS = 22;
 static const std::size_t SEGMENT_DURATION_BITS = 22;
+static const std::size_t SEGMENT_CONSUMPTION_BITS = 31;
+
 static const SegmentWeight INVALID_SEGMENT_WEIGHT = (1u << SEGMENT_WEIGHT_BITS) - 1;
 static const SegmentDuration INVALID_SEGMENT_DURATION = (1u << SEGMENT_DURATION_BITS) - 1;
 static const SegmentWeight MAX_SEGMENT_WEIGHT = INVALID_SEGMENT_WEIGHT - 1;
@@ -116,8 +127,12 @@ static const SegmentDuration MAX_SEGMENT_DURATION = INVALID_SEGMENT_DURATION - 1
 static const EdgeWeight INVALID_EDGE_WEIGHT = std::numeric_limits<EdgeWeight>::max();
 static const EdgeDuration MAXIMAL_EDGE_DURATION = std::numeric_limits<EdgeDuration>::max();
 static const EdgeDistance MAXIMAL_EDGE_DISTANCE = std::numeric_limits<EdgeDistance>::max();
+static const EdgeDrivingFactor MAXIMAL_EDGE_DRIVING_FACTOR = std::numeric_limits<EdgeDrivingFactor>::max();
+static const EdgeDrivingFactor INVALID_EDGE_DRIVING_FACTOR = std::numeric_limits<EdgeDrivingFactor>::max();
+static const EdgeResistanceFactor INVALID_EDGE_RESISTANCE_FACTOR = std::numeric_limits<EdgeResistanceFactor>::max();
 static const TurnPenalty INVALID_TURN_PENALTY = std::numeric_limits<TurnPenalty>::max();
 static const EdgeDistance INVALID_EDGE_DISTANCE = std::numeric_limits<EdgeDistance>::max();
+
 static const EdgeDistance INVALID_FALLBACK_SPEED = std::numeric_limits<double>::max();
 
 // FIXME the bitfields we use require a reduced maximal duration, this should be kept consistent

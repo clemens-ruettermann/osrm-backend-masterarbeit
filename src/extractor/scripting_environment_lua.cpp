@@ -12,6 +12,7 @@
 #include "extractor/query_node.hpp"
 #include "extractor/raster_source.hpp"
 #include "extractor/restriction_parser.hpp"
+#include "util/car.hpp"
 
 #include "guidance/turn_instruction.hpp"
 
@@ -20,6 +21,7 @@
 #include "util/log.hpp"
 #include "util/lua_util.hpp"
 #include "util/typedefs.hpp"
+
 
 #include <osmium/osm.hpp>
 
@@ -219,6 +221,20 @@ void Sol2ScriptingEnvironment::InitContext(LuaScriptingContext &context)
         &ProfileProperties::force_split_edges,
         "call_tagless_node_function",
         &ProfileProperties::call_tagless_node_function);
+
+	context.state.new_usertype<enav::Car>("Car",
+	                                      "wltp",
+	                                      &enav::Car::wltp,
+	                                      "base_battery_capacity",
+	                                      &enav::Car::base_battery_capacity_milli_watt_h,
+	                                      "base_weight",
+	                                      &enav::Car::base_weight,
+	                                      "name",
+	                                      &enav::Car::name,
+										  "max_charging_power",
+										  &enav::Car::max_charging_power,
+										  "supported_plug_types",
+										  &enav::Car::supported_plug_types);
 
     context.state.new_usertype<std::vector<std::string>>(
         "vector",
@@ -542,6 +558,32 @@ void Sol2ScriptingEnvironment::InitContext(LuaScriptingContext &context)
         context.has_way_function = context.way_function.valid();
         context.has_segment_function = context.segment_function.valid();
 
+		sol::table car_table = context.profile_table["car"];
+		if (car_table.valid()) {
+			std::string name = car_table["name"];
+			double wltp = car_table["wltp"];
+			unsigned int base_weight = car_table["base_weight"];
+			double base_battery_capacity = car_table["base_battery_capacity"];
+			unsigned long max_charging_power_kw = car_table["max_charging_power"];
+			std::vector<PlugType> supported_plug_types;
+			sol::table supported_plug_types_table = car_table["supported_plug_types"];
+			if (supported_plug_types_table.valid()) {
+				for (auto && pair : supported_plug_types_table) {
+					for (const auto & plug : PLUG_TYPE_MAP) {
+						if (plug.first == pair.second.as<std::string>()) {
+							supported_plug_types.push_back(plug.second);
+							break;
+						}
+					}
+				}
+			}
+
+
+			context.car = enav::Car(name, wltp, base_weight, base_battery_capacity, supported_plug_types, max_charging_power_kw);
+		} else {
+			std::cerr << "Warning: No valid electic vehicle specified" << std::endl;
+		}
+
         // read properties from 'profile.properties' table
         sol::table properties = context.profile_table["properties"];
         if (properties.valid())
@@ -847,6 +889,10 @@ void Sol2ScriptingEnvironment::InitContext(LuaScriptingContext &context)
 const ProfileProperties &Sol2ScriptingEnvironment::GetProfileProperties()
 {
     return GetSol2Context().properties;
+}
+
+const enav::Car & Sol2ScriptingEnvironment::GetCar() {
+	return GetSol2Context().car;
 }
 
 LuaScriptingContext &Sol2ScriptingEnvironment::GetSol2Context()

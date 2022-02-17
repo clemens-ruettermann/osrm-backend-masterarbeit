@@ -51,6 +51,9 @@ struct StorageConfig final : IOConfig
 
     StorageConfig()
         : IOConfig({".osrm.ramIndex",
+					".osrm.charger_graph",
+					".osrm.charger_graph.charger.json",
+					".osrm.car.properties",
                     ".osrm.fileIndex",
                     ".osrm.edges",
                     ".osrm.geometry",

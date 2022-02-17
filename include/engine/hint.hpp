@@ -63,10 +63,10 @@ struct Hint
     friend std::ostream &operator<<(std::ostream &, const Hint &);
 };
 
-static_assert(sizeof(Hint) == 80 + 4, "Hint is bigger than expected");
-constexpr std::size_t ENCODED_HINT_SIZE = 112;
-static_assert(ENCODED_HINT_SIZE / 4 * 3 >= sizeof(Hint),
-              "ENCODED_HINT_SIZE does not match size of Hint");
+//static_assert(sizeof(Hint) == 100, "Hint is bigger than expected");
+constexpr std::size_t ENCODED_HINT_SIZE = 136;
+//static_assert(ENCODED_HINT_SIZE / 4 * 3 >= sizeof(Hint),
+//              "ENCODED_HINT_SIZE does not match size of Hint");
 } // namespace engine
 } // namespace osrm
 

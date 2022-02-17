@@ -187,10 +187,12 @@ void routingStep(const DataFacade<Algorithm> &facade,
 }
 
 template <bool UseDuration>
-std::tuple<EdgeWeight, EdgeDistance> getLoopWeight(const DataFacade<Algorithm> &facade, NodeID node)
+std::tuple<EdgeWeight, EdgeDistance, EdgeDrivingFactor, EdgeResistanceFactor> getLoopWeight(const DataFacade<Algorithm> &facade, NodeID node)
 {
     EdgeWeight loop_weight = UseDuration ? MAXIMAL_EDGE_DURATION : INVALID_EDGE_WEIGHT;
     EdgeDistance loop_distance = MAXIMAL_EDGE_DISTANCE;
+	EdgeDrivingFactor loop_driving_factor = 0;
+	EdgeResistanceFactor loop_resistance_factor = 0;
     for (auto edge : facade.GetAdjacentEdgeRange(node))
     {
         const auto &data = facade.GetEdgeData(edge);
@@ -204,11 +206,13 @@ std::tuple<EdgeWeight, EdgeDistance> getLoopWeight(const DataFacade<Algorithm> &
                 {
                     loop_weight = value;
                     loop_distance = data.distance;
+					loop_driving_factor = data.driving_factor;
+					loop_resistance_factor = data.resistance_factor;
                 }
             }
         }
     }
-    return std::make_tuple(loop_weight, loop_distance);
+    return std::make_tuple(loop_weight, loop_distance, loop_driving_factor, loop_resistance_factor);
 }
 
 /**
@@ -294,105 +298,109 @@ void unpackPath(const DataFacade<Algorithm> &facade,
     }
 }
 
+
+
 template <typename BidirectionalIterator>
 EdgeDistance calculateEBGNodeAnnotations(const DataFacade<Algorithm> &facade,
                                          BidirectionalIterator packed_path_begin,
                                          BidirectionalIterator packed_path_end)
 {
-    // Make sure we have at least something to unpack
-    if (packed_path_begin == packed_path_end ||
-        std::distance(packed_path_begin, packed_path_end) <= 1)
-        return 0;
+	// Make sure we have at least something to unpack
+	if (packed_path_begin == packed_path_end ||
+	    std::distance(packed_path_begin, packed_path_end) <= 1)
+		return 0;
 
-    std::stack<std::tuple<NodeID, NodeID, bool>> recursion_stack;
-    std::stack<EdgeDistance> distance_stack;
-    // We have to push the path in reverse order onto the stack because it's LIFO.
-    for (auto current = std::prev(packed_path_end); current > packed_path_begin;
-         current = std::prev(current))
-    {
-        recursion_stack.emplace(*std::prev(current), *current, false);
-    }
+	std::stack<std::tuple<NodeID, NodeID, bool>> recursion_stack;
+	std::stack<EdgeDistance> distance_stack;
+	// We have to push the path in reverse order onto the stack because it's LIFO.
+	for (auto current = std::prev(packed_path_end); current > packed_path_begin;
+	     current = std::prev(current))
+	{
+		recursion_stack.emplace(*std::prev(current), *current, false);
+	}
 
-    std::tuple<NodeID, NodeID, bool> edge;
-    while (!recursion_stack.empty())
-    {
-        edge = recursion_stack.top();
-        recursion_stack.pop();
+	std::tuple<NodeID, NodeID, bool> edge;
+	while (!recursion_stack.empty())
+	{
+		edge = recursion_stack.top();
+		recursion_stack.pop();
 
-        // Have we processed the edge before? tells us if we have values in the durations stack that
-        // we can add up
-        if (!std::get<2>(edge))
-        { // haven't processed edge before, so process it in the body!
+		// Have we processed the edge before? tells us if we have values in the durations stack that
+		// we can add up
+		if (!std::get<2>(edge))
+		{ // haven't processed edge before, so process it in the body!
 
-            std::get<2>(edge) = true; // mark that this edge will now be processed
+			std::get<2>(edge) = true; // mark that this edge will now be processed
 
-            // Look for an edge on the forward CH graph (.forward)
-            EdgeID smaller_edge_id =
-                facade.FindSmallestEdge(std::get<0>(edge), std::get<1>(edge), [](const auto &data) {
-                    return data.forward;
-                });
+			// Look for an edge on the forward CH graph (.forward)
+			EdgeID smaller_edge_id =
+					facade.FindSmallestEdge(std::get<0>(edge), std::get<1>(edge), [](const auto &data) {
+						return data.forward;
+					});
 
-            // If we didn't find one there, the we might be looking at a part of the path that
-            // was found using the backward search.  Here, we flip the node order (.second,
-            // .first) and only consider edges with the `.backward` flag.
-            if (SPECIAL_EDGEID == smaller_edge_id)
-            {
-                smaller_edge_id =
-                    facade.FindSmallestEdge(std::get<1>(edge),
-                                            std::get<0>(edge),
-                                            [](const auto &data) { return data.backward; });
-            }
+			// If we didn't find one there, the we might be looking at a part of the path that
+			// was found using the backward search.  Here, we flip the node order (.second,
+			// .first) and only consider edges with the `.backward` flag.
+			if (SPECIAL_EDGEID == smaller_edge_id)
+			{
+				smaller_edge_id =
+						facade.FindSmallestEdge(std::get<1>(edge),
+						                        std::get<0>(edge),
+						                        [](const auto &data) { return data.backward; });
+			}
 
-            // If we didn't find anything *still*, then something is broken and someone has
-            // called this function with bad values.
-            BOOST_ASSERT_MSG(smaller_edge_id != SPECIAL_EDGEID, "Invalid smaller edge ID");
+			// If we didn't find anything *still*, then something is broken and someone has
+			// called this function with bad values.
+			BOOST_ASSERT_MSG(smaller_edge_id != SPECIAL_EDGEID, "Invalid smaller edge ID");
 
-            const auto &data = facade.GetEdgeData(smaller_edge_id);
-            BOOST_ASSERT_MSG(data.weight != std::numeric_limits<EdgeWeight>::max(),
-                             "edge weight invalid");
+			const auto &data = facade.GetEdgeData(smaller_edge_id);
+			BOOST_ASSERT_MSG(data.weight != std::numeric_limits<EdgeWeight>::max(),
+			                 "edge weight invalid");
 
-            // If the edge is a shortcut, we need to add the two halfs to the stack.
-            if (data.shortcut)
-            { // unpack
-                const NodeID middle_node_id = data.turn_id;
-                // Note the order here - we're adding these to a stack, so we
-                // want the first->middle to get visited before middle->second
-                recursion_stack.emplace(edge);
-                recursion_stack.emplace(middle_node_id, std::get<1>(edge), false);
-                recursion_stack.emplace(std::get<0>(edge), middle_node_id, false);
-            }
-            else
-            {
-                // compute the duration here and put it onto the duration stack using method
-                // similar to annotatePath but smaller
-                EdgeDistance distance = computeEdgeDistance(facade, std::get<0>(edge));
-                distance_stack.emplace(distance);
-            }
-        }
-        else
-        { // the edge has already been processed. this means that there are enough values in the
-            // distances stack
+			// If the edge is a shortcut, we need to add the two halfs to the stack.
+			if (data.shortcut)
+			{ // unpack
+				const NodeID middle_node_id = data.turn_id;
+				// Note the order here - we're adding these to a stack, so we
+				// want the first->middle to get visited before middle->second
+				recursion_stack.emplace(edge);
+				recursion_stack.emplace(middle_node_id, std::get<1>(edge), false);
+				recursion_stack.emplace(std::get<0>(edge), middle_node_id, false);
+			}
+			else
+			{
+				// compute the duration here and put it onto the duration stack using method
+				// similar to annotatePath but smaller
+				EdgeDistance distance = computeEdgeDistance(facade, std::get<0>(edge));
+				distance_stack.emplace(distance);
+			}
+		}
+		else
+		{ // the edge has already been processed. this means that there are enough values in the
+			// distances stack
 
-            BOOST_ASSERT_MSG(distance_stack.size() >= 2,
-                             "There are not enough (at least 2) values on the distance stack");
-            EdgeDistance distance1 = distance_stack.top();
-            distance_stack.pop();
-            EdgeDistance distance2 = distance_stack.top();
-            distance_stack.pop();
-            EdgeDistance distance = distance1 + distance2;
-            distance_stack.emplace(distance);
-        }
-    }
+			BOOST_ASSERT_MSG(distance_stack.size() >= 2,
+			                 "There are not enough (at least 2) values on the distance stack");
+			EdgeDistance distance1 = distance_stack.top();
+			distance_stack.pop();
+			EdgeDistance distance2 = distance_stack.top();
+			distance_stack.pop();
+			EdgeDistance distance = distance1 + distance2;
+			distance_stack.emplace(distance);
+		}
+	}
 
-    EdgeDistance total_distance = 0;
-    while (!distance_stack.empty())
-    {
-        total_distance += distance_stack.top();
-        distance_stack.pop();
-    }
+	EdgeDistance total_distance = 0;
+	while (!distance_stack.empty())
+	{
+		total_distance += distance_stack.top();
+		distance_stack.pop();
+	}
 
-    return total_distance;
+	return total_distance;
 }
+
+
 
 template <typename RandomIter, typename FacadeT>
 void unpackPath(const FacadeT &facade,
