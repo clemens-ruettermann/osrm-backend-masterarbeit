@@ -27,7 +27,14 @@ class MockScriptingEnvironment : public extractor::ScriptingEnvironment
         return properties;
     }
 
-    std::vector<std::string> GetNameSuffixList() override final { return {}; }
+	const enav::Car & GetCar() override {
+		static enav::Car mock_car{"Mock Car", 1, 1, 1, 1, {}};
+		return mock_car;
+	}
+
+private:
+
+	std::vector<std::string> GetNameSuffixList() override final { return {}; }
     std::vector<std::vector<std::string>> GetExcludableClasses() override final { return {}; };
     std::vector<std::string> GetClassNames() override { return {}; };
     std::vector<std::string> GetRelations() override { return {}; };

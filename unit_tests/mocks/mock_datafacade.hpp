@@ -80,13 +80,27 @@ class MockBaseDataFacade : public engine::datafacade::BaseDataFacade
         static std::uint64_t data[] = {1, 2, 3};
         static const extractor::SegmentDataView::SegmentDurationVector durations(
             util::vector_view<std::uint64_t>(data, 3), 3);
-        return DurationForwardRange(durations.begin(), durations.end());
+        return {durations.begin(), durations.end()};
     }
     DurationReverseRange GetUncompressedReverseDurations(const EdgeID id) const override
     {
         return DurationReverseRange(GetUncompressedForwardDurations(id));
     }
-    DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID /*id*/) const override
+
+	ConsumptionForwardRange GetUncompressedForwardConsumptions(const EdgeID id) const override {
+		//TODO KENSPECKLE hier vernünftige test daten einbauen
+//		static std::int32_t data[] = {1, 2, 3};
+//		static const extractor::SegmentDataView::SegmentConsumptionVector consumptions(util::vector_view<std::uint32_t>(data, 3), 3);
+//		consumptions.reset()
+//		return {consumptions.begin(), consumptions.end()};
+		return {};
+	}
+
+	ConsumptionReverseRange GetUncompressedReverseConsumptions(const EdgeID id) const override {
+		return ConsumptionReverseRange(GetUncompressedForwardConsumptions(id));
+	}
+
+	DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID /*id*/) const override
     {
         return {};
     }

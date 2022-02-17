@@ -36,7 +36,7 @@
 # This is because, the lua location is not standardized and may exist in
 # locations other than lua/
 
-include(FindPkgConfig)
+#include(FindPkgConfig)
 
 unset(_lua_include_subdirs)
 unset(_lua_library_names)

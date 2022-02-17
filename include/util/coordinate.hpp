@@ -187,7 +187,8 @@ struct Coordinate
     FixedLongitude lon;
     FixedLatitude lat;
 
-    Coordinate() : lon{std::numeric_limits<int>::min()}, lat{std::numeric_limits<int>::min()} {}
+    Coordinate() : lon{std::numeric_limits<int>::min()},
+			lat{std::numeric_limits<int>::min()} {}
 
     Coordinate(const FloatCoordinate &other);
 
@@ -214,8 +215,21 @@ struct Coordinate
     }
 
     bool IsValid() const;
+	static Coordinate FromDouble(const double lon, const double lat);
+	static Coordinate FromFixed(const std::int32_t lon, const std::int32_t lat);
+	std::string ToString() const;
+	std::string ToInvertedString() const;
     friend bool operator==(const Coordinate lhs, const Coordinate rhs);
     friend bool operator!=(const Coordinate lhs, const Coordinate rhs);
+
+	bool operator<(const Coordinate &rhs) const;
+
+	bool operator>(const Coordinate &rhs) const;
+
+	bool operator<=(const Coordinate &rhs) const;
+
+	bool operator>=(const Coordinate &rhs) const;
+
 };
 
 /**

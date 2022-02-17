@@ -60,6 +60,7 @@ class RouteAPI : public BaseAPI
         }
         else
         {
+			auto a = response.is<util::json::Object>();
             auto &json_result = response.get<util::json::Object>();
             MakeResponse(raw_routes, all_start_end_points, json_result);
         }
@@ -104,7 +105,7 @@ class RouteAPI : public BaseAPI
             if (!route.is_valid())
                 continue;
 
-            jsRoutes.values.push_back(MakeRoute(route.segment_end_coordinates,
+            jsRoutes.values.emplace_back(MakeRoute(route.segment_end_coordinates,
                                                 route.unpacked_path_segments,
                                                 route.source_traversed_in_reverse,
                                                 route.target_traversed_in_reverse));
@@ -389,6 +390,7 @@ class RouteAPI : public BaseAPI
             fbresult::LegBuilder legBuilder(fb_result);
             legBuilder.add_distance(leg.distance);
             legBuilder.add_duration(leg.duration);
+			legBuilder.add_consumption(leg.consumption);
             legBuilder.add_weight(leg.weight);
             if (!leg.summary.empty())
             {
@@ -419,6 +421,7 @@ class RouteAPI : public BaseAPI
         fbresult::RouteObjectBuilder routeObject(fb_result);
         routeObject.add_distance(route.distance);
         routeObject.add_duration(route.duration);
+		routeObject.add_consumption(route.consumption);
         routeObject.add_weight(route.weight);
         routeObject.add_weight_name(weight_name_string);
         routeObject.add_legs(legs_vector);
@@ -485,6 +488,14 @@ class RouteAPI : public BaseAPI
                     return anno.weight;
                 });
         }
+
+		flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumption;
+		if (requested_annotations & RouteParameters::AnnotationsType::Consumption) {
+			consumption = GetAnnotations<int32_t>(
+					fb_result, leg_geometry, [] (const guidance::LegGeometry::Annotation &anno) {
+						return anno.consumption;
+					});
+		}
 
         flatbuffers::Offset<flatbuffers::Vector<uint32_t>> datasources;
         if (requested_annotations & RouteParameters::AnnotationsType::Datasources)
@@ -630,6 +641,7 @@ class RouteAPI : public BaseAPI
         fbresult::StepBuilder stepBuilder(builder);
         stepBuilder.add_duration(step.duration);
         stepBuilder.add_distance(step.distance);
+		stepBuilder.add_consumption(step.consumption);
         stepBuilder.add_weight(step.weight);
         stepBuilder.add_name(name_string);
         stepBuilder.add_mode(mode_string);
@@ -815,6 +827,12 @@ class RouteAPI : public BaseAPI
                         leg_geometry,
                         [](const guidance::LegGeometry::Annotation &anno) { return anno.weight; });
                 }
+	            if (requested_annotations & RouteParameters::AnnotationsType::Consumption)
+	            {
+		            annotation.values["consumption"] = GetAnnotations(
+				            leg_geometry,
+				            [](const guidance::LegGeometry::Annotation &anno) { return anno.consumption; });
+	            }
                 if (requested_annotations & RouteParameters::AnnotationsType::Datasources)
                 {
                     annotation.values["datasources"] = GetAnnotations(
@@ -828,7 +846,7 @@ class RouteAPI : public BaseAPI
                     nodes.values.reserve(leg_geometry.osm_node_ids.size());
                     for (const auto node_id : leg_geometry.osm_node_ids)
                     {
-                        nodes.values.push_back(static_cast<std::uint64_t>(node_id));
+                        nodes.values.emplace_back(static_cast<std::uint64_t>(node_id));
                     }
                     annotation.values["nodes"] = std::move(nodes);
                 }
@@ -842,9 +860,9 @@ class RouteAPI : public BaseAPI
                     {
                         const auto name = facade.GetDatasourceName(i);
                         // Length of 0 indicates the first empty name, so we can stop here
-                        if (name.size() == 0)
+                        if (name.empty())
                             break;
-                        datasource_names.values.push_back(std::string(facade.GetDatasourceName(i)));
+                        datasource_names.values.emplace_back(std::string(facade.GetDatasourceName(i)));
                     }
                     metadata.values["datasource_names"] = datasource_names;
                     annotation.values["metadata"] = metadata;
@@ -853,7 +871,6 @@ class RouteAPI : public BaseAPI
                 annotations.push_back(std::move(annotation));
             }
         }
-
         auto result = json::makeRoute(route,
                                       json::makeRouteLegs(std::move(legs),
                                                           std::move(step_geometries),

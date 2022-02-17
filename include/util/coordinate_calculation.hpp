@@ -47,6 +47,8 @@ double fccApproximateDistance(const Coordinate first_coordinate,
                               const Coordinate second_coordinate);
 
 double haversineDistance(const Coordinate first_coordinate, const Coordinate second_coordinate);
+double haversineDistanceFromDoubles(const double lat1, const double lon1, const double lat2, const double lon2);
+double haversineWithElevation(const Coordinate coordinate_1, const Coordinate coordinate_2, double elevation_1, double elevation_2);
 
 double greatCircleDistance(const Coordinate first_coordinate, const Coordinate second_coordinate);
 

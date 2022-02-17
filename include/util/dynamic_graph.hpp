@@ -443,8 +443,7 @@ template <typename EdgeDataT> class DynamicGraph
                 old_to_new_edge[edge] = new_edge_index++;
             }
         }
-        BOOST_ASSERT(std::find(old_to_new_edge.begin(), old_to_new_edge.end(), SPECIAL_EDGEID) ==
-                     old_to_new_edge.end());
+        BOOST_ASSERT(std::find(old_to_new_edge.begin(), old_to_new_edge.end(), SPECIAL_EDGEID) == old_to_new_edge.end());
         util::inplacePermutation(edge_list.begin(), edge_list.end(), old_to_new_edge);
         // Remove useless dummy nodes at the end
         edge_list.resize(number_of_valid_edges);

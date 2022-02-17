@@ -54,9 +54,9 @@ if(ENABLE_MASON)
 endif()
 
 # be compatible with version handling before cmake 3.x
-if (POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD)
-endif()
+#if (POLICY CMP0048)
+#  cmake_policy(SET CMP0048 OLD)
+#endif()
 if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
@@ -69,7 +69,7 @@ include(JSONParser)
 file(READ "package.json" packagejsonraw)
 sbeParseJson(packagejson packagejsonraw)
 
-if (packagejson.version MATCHES "^([0-9]+)\.([0-9]+)\.([0-9]+)")
+if (packagejson.version MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)")
     set(OSRM_VERSION_MAJOR ${CMAKE_MATCH_1})
     set(OSRM_VERSION_MINOR ${CMAKE_MATCH_2})
     set(OSRM_VERSION_PATCH ${CMAKE_MATCH_3})
@@ -135,6 +135,8 @@ include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/include/)
 include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/sol2/)
 include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/variant/include)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/csvstream)
+include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/threadpool)
 
 set(BOOST_COMPONENTS date_time chrono filesystem iostreams program_options regex system thread unit_test_framework)
 
@@ -144,6 +146,7 @@ configure_file(
 )
 file(GLOB UtilGlob src/util/*.cpp src/util/*/*.cpp)
 file(GLOB ExtractorGlob src/extractor/*.cpp src/extractor/*/*.cpp)
+file(GLOB ElevationGlob src/elevation/elevation_extractor.cpp src/elevation/geotiff_extractor.cpp src/elevation/geotiff_extractor_pool.cpp)
 file(GLOB GuidanceGlob src/guidance/*.cpp src/extractor/intersection/*.cpp)
 file(GLOB PartitionerGlob src/partitioner/*.cpp)
 file(GLOB CustomizerGlob src/customize/*.cpp)
@@ -153,9 +156,11 @@ file(GLOB StorageGlob src/storage/*.cpp)
 file(GLOB ServerGlob src/server/*.cpp src/server/**/*.cpp)
 file(GLOB EngineGlob src/engine/*.cpp src/engine/**/*.cpp)
 file(GLOB ErrorcodesGlob src/osrm/errorcodes.cpp)
+file(GLOB ENavGlob src/enav/*)
 
 add_library(UTIL OBJECT ${UtilGlob})
 add_library(EXTRACTOR OBJECT ${ExtractorGlob})
+add_library(ELEVATION OBJECT ${ElevationGlob} include/util/math_utils.h)
 add_library(GUIDANCE OBJECT ${GuidanceGlob})
 add_library(PARTITIONER OBJECT ${PartitionerGlob})
 add_library(CUSTOMIZER OBJECT ${CustomizerGlob})
@@ -164,7 +169,8 @@ add_library(UPDATER OBJECT ${UpdaterGlob})
 add_library(STORAGE OBJECT ${StorageGlob})
 add_library(ENGINE OBJECT ${EngineGlob})
 
-if (BUILD_ROUTED) 
+
+if (BUILD_ROUTED)
   add_library(SERVER OBJECT ${ServerGlob})
   add_executable(osrm-routed src/tools/routed.cpp $<TARGET_OBJECTS:SERVER> $<TARGET_OBJECTS:UTIL>)
 endif()
@@ -172,18 +178,93 @@ endif()
 set_target_properties(UTIL PROPERTIES LINKER_LANGUAGE CXX)
 
 add_executable(osrm-extract src/tools/extract.cpp)
+add_executable(osrm-elevation src/tools/elevation.cpp)
 add_executable(osrm-partition src/tools/partition.cpp)
 add_executable(osrm-customize src/tools/customize.cpp)
 add_executable(osrm-contract src/tools/contract.cpp)
 add_executable(osrm-datastore src/tools/store.cpp $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
+
+include_directories()
+add_library(osrm_charger_graph_builder
+        include/charger_graph/charger.hpp
+        src/charger_graph/charger.cpp
+        include/charger_graph/charger_graph.hpp
+        src/charger_graph/charger_graph.cpp
+        include/charger_graph/charger_graph_builder.hpp
+        src/charger_graph/charger_graph_builder.cpp
+        include/osrm/charger_graph_builder_pimpl.hpp
+        src/osrm/charger_graph_builder_pimpl.cpp
+        src/util/car.cpp
+        include/util/car.hpp
+        src/charger_graph/files.cpp
+        include/charger_graph/charger_graph_builder_config.hpp
+        include/charger_graph/charger_graph_edge.hpp
+        include/charger_graph/files.hpp
+        include/charger_graph/serialization.hpp
+        )
+add_executable(osrm-charger-graph-builder src/tools/charger_graph_build_main.cpp)
+
+
 add_library(osrm src/osrm/osrm.cpp $<TARGET_OBJECTS:ENGINE> $<TARGET_OBJECTS:STORAGE> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_contract src/osrm/contractor.cpp $<TARGET_OBJECTS:CONTRACTOR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_extract src/osrm/extractor.cpp $<TARGET_OBJECTS:EXTRACTOR> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
+add_library(osrm_elevation src/osrm/elevator.cpp $<TARGET_OBJECTS:ELEVATION> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_guidance $<TARGET_OBJECTS:GUIDANCE> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_partition src/osrm/partitioner.cpp $<TARGET_OBJECTS:PARTITIONER> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_customize src/osrm/customizer.cpp $<TARGET_OBJECTS:CUSTOMIZER> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_update $<TARGET_OBJECTS:UPDATER> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_store $<TARGET_OBJECTS:STORAGE> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
+
+find_package(GDAL)
+
+include_directories(include/enav)
+add_library(enav
+        include/charger_graph/charger.hpp
+        src/charger_graph/charger.cpp
+        src/charger_graph/files.cpp
+        include/charger_graph/files.hpp
+        include/charger_graph/charger_graph.hpp
+        src/charger_graph/charger_graph.cpp
+        include/charger_graph/charger_graph_builder.hpp
+        include/enav/charger_utils.hpp
+        src/charger_graph/charger_graph_builder.cpp
+        include/util/typedefs.hpp
+        include/charger_graph/reachable_chargers.hpp
+        $<TARGET_OBJECTS:UTIL>
+        ${UtilGlob}
+        )
+
+target_link_libraries(enav UTIL ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(osrm_charger_graph_builder osrm ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(osrm-charger-graph-builder osrm_charger_graph_builder ${Boost_PROGRAM_OPTIONS_LIBRARY})
+
+
+add_library(charger_graph
+        src/charger_graph/charger.cpp
+        include/charger_graph/charger.hpp
+        src/charger_graph/charger_graph.cpp
+        include/charger_graph/charger_graph.hpp
+        third_party/threadpool/threadpool.h
+        include/charger_graph/charger_filter.hpp
+        include/elevation/geotiff_value_matrix.h)
+
+target_link_libraries(charger_graph osrm)
+
+#add_executable(charger_graph_route
+#        src/charger_graph/charger_route_main.cpp
+#)
+#target_link_libraries(charger_graph_route charger_graph)
+
+add_executable(performance_test_charger_routes
+        src/charger_graph/performance_test_charger_route.cpp)
+target_link_libraries(performance_test_charger_routes osrm charger_graph osrm_elevation enav)
+
+
+add_executable(generate_test_points src/charger_graph/generate_test_points.cpp)
+target_link_libraries(generate_test_points charger_graph osrm_elevation enav)
+
+add_executable(test_main src/charger_graph/test_main.cpp)
+target_link_libraries(test_main osrm charger_graph osrm_elevation enav)
 
 if(ENABLE_GOLD_LINKER)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
@@ -245,10 +326,10 @@ if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb")
-  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og -ggdb")
+  set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb -g")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Og -ggdb -g")
 endif()
-
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
 
 if(CMAKE_BUILD_TYPE MATCHES Release OR CMAKE_BUILD_TYPE MATCHES MinRelSize OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
   message(STATUS "Configuring release mode optimizations")
@@ -345,7 +426,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(COLOR_FLAG "")
   endif()
   # using GCC
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=1 -Wno-error=maybe-uninitialized -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 ${COLOR_FLAG} -fPIC -ftemplate-depth=1024")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=1 -Wno-error=maybe-uninitialized -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 ${COLOR_FLAG} -fPIC -ftemplate-depth=1024")
 
   if(WIN32) # using mingw
     add_dependency_defines(-DWIN32)
@@ -361,7 +442,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   # using Intel C++
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-intel -wd10237 -Wall -ipo -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-intel -wd10237 -ipo -fPIC") #-Wall
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   # using Visual Studio C++
   set(BOOST_COMPONENTS ${BOOST_COMPONENTS} zlib)
@@ -401,8 +482,8 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} ${LINKER_FLAGS}")
 
 # Activate C++1y
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-  set(OSRM_CXXFLAGS "${OSRM_CXXFLAGS} -std=c++14")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+  set(OSRM_CXXFLAGS "${OSRM_CXXFLAGS} -std=c++17")
 endif()
 
 # Configuring other platform dependencies
@@ -430,8 +511,18 @@ find_package(Threads REQUIRED)
 set(RAPIDJSON_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/rapidjson/include")
 include_directories(SYSTEM ${RAPIDJSON_INCLUDE_DIR})
 
+set(CSV_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/csv/")
+include_directories(SYSTEM ${CSV_INCLUDE_DIR})
+
+set(CSVSTREAM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/csvstream/")
+include_directories(SYSTEM ${CSVSTREAM_INCLUDE_DIR})
+
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/csvstream")
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/threadpool")
+
 set(MICROTAR_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/microtar/src")
 include_directories(SYSTEM ${MICROTAR_INCLUDE_DIR})
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann-json/")
 
 set(MBXGEOM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/geometry.hpp-0.9.2/include")
 include_directories(SYSTEM ${MBXGEOM_INCLUDE_DIR})
@@ -523,7 +614,7 @@ if(ENABLE_MASON)
   include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libosmium/include)
 else()
   if (BUILD_ROUTED)
-    # osrm-routed requires newer boost:asio 
+    # osrm-routed requires newer boost:asio
     find_package(Boost 1.70 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
   else()
     find_package(Boost 1.60 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
@@ -615,13 +706,15 @@ set(BOOST_ENGINE_LIBRARIES
   ${BOOST_BASE_LIBRARIES})
 
 # Binaries
+target_link_libraries(osrm-charger-graph-builder ${BOOST_BASE_LIBRARIES} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(osrm-datastore osrm_store ${Boost_PROGRAM_OPTIONS_LIBRARY})
-target_link_libraries(osrm-extract osrm_extract ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(osrm-extract osrm_extract osrm_elevation ${Boost_PROGRAM_OPTIONS_LIBRARY})
+target_link_libraries(osrm-elevation osrm_elevation ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(osrm-partition osrm_partition ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(osrm-customize osrm_customize ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(osrm-contract osrm_contract ${Boost_PROGRAM_OPTIONS_LIBRARY})
 if (BUILD_ROUTED)
-  target_link_libraries(osrm-routed osrm ${Boost_PROGRAM_OPTIONS_LIBRARY} ${OPTIONAL_SOCKET_LIBS} ${ZLIB_LIBRARY})
+  target_link_libraries(osrm-routed osrm enav ${Boost_PROGRAM_OPTIONS_LIBRARY} ${OPTIONAL_SOCKET_LIBS} ${ZLIB_LIBRARY})
 endif()
 
 set(EXTRACTOR_LIBRARIES
@@ -634,6 +727,17 @@ set(EXTRACTOR_LIBRARIES
     ${OSMIUM_LIBRARIES}
     ${TBB_LIBRARIES}
     ${ZLIB_LIBRARY}
+        ${GDAL_LIBRARIES}
+    ${MAYBE_COVERAGE_LIBRARIES})
+set(ELEVATION_LIBRARIES
+    ${BZIP2_LIBRARIES}
+    ${BOOST_BASE_LIBRARIES}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${EXPAT_LIBRARIES}
+    ${OSMIUM_LIBRARIES}
+    ${TBB_LIBRARIES}
+    ${ZLIB_LIBRARY}
+    ${GDAL_LIBRARIES}
     ${MAYBE_COVERAGE_LIBRARIES})
 set(GUIDANCE_LIBRARIES
     ${BOOST_BASE_LIBRARIES}
@@ -693,6 +797,7 @@ target_link_libraries(osrm ${ENGINE_LIBRARIES})
 target_link_libraries(osrm_update ${UPDATER_LIBRARIES})
 target_link_libraries(osrm_contract ${CONTRACTOR_LIBRARIES} osrm_update osrm_store)
 target_link_libraries(osrm_extract osrm_guidance ${EXTRACTOR_LIBRARIES})
+target_link_libraries(osrm_elevation osrm_guidance ${ELEVATION_LIBRARIES})
 target_link_libraries(osrm_partition ${PARTITIONER_LIBRARIES})
 target_link_libraries(osrm_customize ${CUSTOMIZER_LIBRARIES} osrm_update osrm_store)
 target_link_libraries(osrm_store ${STORAGE_LIBRARIES})
@@ -724,6 +829,7 @@ endif()
 # (i.e., from /usr/local/bin/) the linker can find library dependencies. For
 # more info see http://www.cmake.org/Wiki/CMake_RPATH_handling
 set_property(TARGET osrm-extract PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
+set_property(TARGET osrm-elevation PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_property(TARGET osrm-partition PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_property(TARGET osrm-contract PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
 set_property(TARGET osrm-datastore PROPERTY INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -739,6 +845,7 @@ set(ApiHeader include/engine/api/base_result.hpp)
 set(EngineHeader include/engine/status.hpp include/engine/engine_config.hpp include/engine/hint.hpp include/engine/bearing.hpp include/engine/approach.hpp include/engine/phantom_node.hpp)
 set(UtilHeader include/util/coordinate.hpp include/util/json_container.hpp include/util/typedefs.hpp include/util/alias.hpp include/util/exception.hpp include/util/bearing.hpp)
 set(ExtractorHeader include/extractor/extractor.hpp include/storage/io_config.hpp include/extractor/extractor_config.hpp include/extractor/travel_mode.hpp)
+set(ElevationHeader include/elevation/elevation.hpp include/storage/io_config.hpp include/elevation/elevation_config.hpp)
 set(PartitionerHeader include/partitioner/partitioner.hpp include/partitioner/partitioner_config.hpp)
 set(ContractorHeader include/contractor/contractor.hpp include/contractor/contractor_config.hpp)
 set(StorageHeader include/storage/storage.hpp include/storage/io_config.hpp include/storage/storage_config.hpp)
@@ -746,6 +853,7 @@ install(FILES ${EngineHeader} DESTINATION include/osrm/engine)
 install(FILES ${UtilHeader} DESTINATION include/osrm/util)
 install(FILES ${StorageHeader} DESTINATION include/osrm/storage)
 install(FILES ${ExtractorHeader} DESTINATION include/osrm/extractor)
+install(FILES ${ExtractorHeader} DESTINATION include/osrm/elevation)
 install(FILES ${PartitionerHeader} DESTINATION include/osrm/partitioner)
 install(FILES ${ContractorHeader} DESTINATION include/osrm/contractor)
 install(FILES ${LibraryGlob} DESTINATION include/osrm)
@@ -754,6 +862,7 @@ install(FILES ${ApiHeader} DESTINATION include/osrm/engine/api)
 install(FILES ${VariantGlob} DESTINATION include/mapbox)
 install(FILES ${FlatbuffersGlob} DESTINATION include/flatbuffers)
 install(TARGETS osrm-extract DESTINATION bin)
+install(TARGETS osrm-elevation DESTINATION bin)
 install(TARGETS osrm-partition DESTINATION bin)
 install(TARGETS osrm-customize DESTINATION bin)
 install(TARGETS osrm-contract DESTINATION bin)
@@ -763,6 +872,7 @@ if (BUILD_ROUTED)
 endif()
 install(TARGETS osrm DESTINATION lib)
 install(TARGETS osrm_extract DESTINATION lib)
+install(TARGETS osrm_elevation DESTINATION lib)
 install(TARGETS osrm_partition DESTINATION lib)
 install(TARGETS osrm_customize DESTINATION lib)
 install(TARGETS osrm_update DESTINATION lib)

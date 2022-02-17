@@ -58,6 +58,7 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
     using SegmentNodeVector = Vector<NodeID>;
     using SegmentWeightVector = PackedVector<SegmentWeight, SEGMENT_WEIGHT_BITS>;
     using SegmentDurationVector = PackedVector<SegmentDuration, SEGMENT_DURATION_BITS>;
+	using SegmentConsumptionVector = Vector<SegmentConsumption>;
     using SegmentDatasourceVector = Vector<DatasourceID>;
 
     SegmentDataContainerImpl() = default;
@@ -68,11 +69,19 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
                              SegmentWeightVector rev_weights_,
                              SegmentDurationVector fwd_durations_,
                              SegmentDurationVector rev_durations_,
+                             SegmentConsumptionVector fwd_consumptions_,
+                             SegmentConsumptionVector rev_consumptions_,
                              SegmentDatasourceVector fwd_datasources_,
                              SegmentDatasourceVector rev_datasources_)
-        : index(std::move(index_)), nodes(std::move(nodes_)), fwd_weights(std::move(fwd_weights_)),
-          rev_weights(std::move(rev_weights_)), fwd_durations(std::move(fwd_durations_)),
-          rev_durations(std::move(rev_durations_)), fwd_datasources(std::move(fwd_datasources_)),
+        : index(std::move(index_)),
+		  nodes(std::move(nodes_)),
+		  fwd_weights(std::move(fwd_weights_)),
+          rev_weights(std::move(rev_weights_)),
+		  fwd_durations(std::move(fwd_durations_)),
+          rev_durations(std::move(rev_durations_)),
+		  fwd_consumptions(std::move(fwd_consumptions_)),
+		  rev_consumptions(std::move(rev_consumptions_)),
+		  fwd_datasources(std::move(fwd_datasources_)),
           rev_datasources(std::move(rev_datasources_))
     {
     }
@@ -121,6 +130,22 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
 
         return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
     }
+
+	auto GetForwardConsumptions(const DirectionalGeometryID id)
+	{
+		const auto begin = fwd_consumptions.begin() + index[id] + 1;
+		const auto end = fwd_consumptions.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
+	auto GetReverseConsumptions(const DirectionalGeometryID id)
+	{
+		const auto begin = rev_consumptions.begin() + index[id] + 1;
+		const auto end = rev_consumptions.begin() + index[id] + 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
 
     auto GetForwardDatasources(const DirectionalGeometryID id)
     {
@@ -183,6 +208,23 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
         return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
     }
 
+
+	auto GetForwardConsumptions(const DirectionalGeometryID id) const
+	{
+		const auto begin = fwd_consumptions.cbegin() + index[id] + 1;
+		const auto end = fwd_consumptions.cbegin() + index[id + 1];
+
+		return boost::make_iterator_range(begin, end);
+	}
+
+	auto GetReverseConsumptions(const DirectionalGeometryID id) const
+	{
+		const auto begin = rev_consumptions.cbegin() + index[id];
+		const auto end = rev_consumptions.cbegin() + index[id + 1] - 1;
+
+		return boost::adaptors::reverse(boost::make_iterator_range(begin, end));
+	}
+
     auto GetForwardDatasources(const DirectionalGeometryID id) const
     {
         const auto begin = fwd_datasources.cbegin() + index[id] + 1;
@@ -218,6 +260,8 @@ template <storage::Ownership Ownership> class SegmentDataContainerImpl
     SegmentWeightVector rev_weights;
     SegmentDurationVector fwd_durations;
     SegmentDurationVector rev_durations;
+	SegmentConsumptionVector fwd_consumptions;
+	SegmentConsumptionVector rev_consumptions;
     SegmentDatasourceVector fwd_datasources;
     SegmentDatasourceVector rev_datasources;
 };

@@ -196,7 +196,15 @@ class ContiguousInternalMemoryDataFacade<routing_algorithms::offline::Algorithm>
         return DurationReverseRange(DurationForwardRange());
     }
 
-    DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID /*id*/) const override
+	ConsumptionForwardRange GetUncompressedForwardConsumptions(const EdgeID id) const override {
+		return {};
+	}
+
+	ConsumptionReverseRange GetUncompressedReverseConsumptions(const EdgeID id) const override {
+		return ConsumptionReverseRange(ConsumptionForwardRange());
+	}
+
+	DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID /*id*/) const override
     {
         return {};
     }

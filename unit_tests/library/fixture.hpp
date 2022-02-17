@@ -3,6 +3,7 @@
 
 #include "osrm/engine_config.hpp"
 #include "osrm/osrm.hpp"
+#include "engine/engine.hpp"
 
 #include <string>
 

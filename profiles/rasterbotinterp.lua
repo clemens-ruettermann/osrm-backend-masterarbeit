@@ -1,6 +1,6 @@
 -- Rasterbot with interpolation profile
 
-functions = require('rasterbot')
+functions = require('lib/rasterbot.lua')
 
 functions.process_segment = function(profile, segment)
   local sourceData = raster:interpolate(profile.raster_source, segment.source.lon, segment.source.lat)

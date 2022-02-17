@@ -86,6 +86,13 @@ double fccApproximateDistance(const Coordinate coordinate_1, const Coordinate co
         .distance({lon1, lat1}, {lon2, lat2});
 }
 
+
+double haversineDistanceFromDoubles(const double lon1, const double lat1, const double lon2, const double lat2) {
+	auto coord1 = Coordinate::FromDouble(lon1, lat1);
+	auto coord2 = Coordinate::FromDouble(lon2, lat2);
+	return haversineDistance(coord1, coord2);
+}
+
 double haversineDistance(const Coordinate coordinate_1, const Coordinate coordinate_2)
 {
     auto lon1 = static_cast<int>(coordinate_1.lon);
@@ -113,6 +120,11 @@ double haversineDistance(const Coordinate coordinate_1, const Coordinate coordin
                          std::cos(dlat1) * std::cos(dlat2) * std::pow(std::sin(dlong / 2.), 2);
     const double charv = 2. * std::atan2(std::sqrt(aharv), std::sqrt(1.0 - aharv));
     return detail::EARTH_RADIUS * charv;
+}
+
+
+double haversineWithElevation(const Coordinate coordinate_1, const Coordinate coordinate_2, double elevation_1, double elevation_2) {
+	return std::sqrt(std::pow(haversineDistance(coordinate_1, coordinate_2), 2) + std::pow(elevation_1-elevation_2, 2));
 }
 
 double greatCircleDistance(const Coordinate coordinate_1, const Coordinate coordinate_2)

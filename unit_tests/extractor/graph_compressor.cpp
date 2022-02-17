@@ -31,6 +31,7 @@ inline InputEdge MakeUnitEdge(const NodeID from, const NodeID to)
             1,                             // weight
             1,                             // duration
             1,                             // distance
+			1,                             // consumption
             GeometryID{0, false},          // geometry_id
             false,                         // reversed
             NodeBasedEdgeClassification(), // default flags

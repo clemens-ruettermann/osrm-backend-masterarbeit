@@ -288,8 +288,7 @@ getIntersectionGeometries(const util::NodeBasedDynamicGraph &graph,
 
                 // Only one of the edges must be reversed, mark it as merged to remove from
                 // intersection view
-                BOOST_ASSERT(graph.GetEdgeData(lhs.eid).reversed ^
-                             graph.GetEdgeData(rhs.eid).reversed);
+                BOOST_ASSERT(graph.GetEdgeData(lhs.eid).reversed ^ graph.GetEdgeData(rhs.eid).reversed);
                 merged_edge_ids.insert(graph.GetEdgeData(lhs.eid).reversed ? lhs.eid : rhs.eid);
             }
         }

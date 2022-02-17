@@ -21,12 +21,12 @@ struct QueryNode
     explicit QueryNode(const util::FixedLongitude lon_,
                        const util::FixedLatitude lat_,
                        const key_type node_id_)
-        : lon(lon_), lat(lat_), node_id(node_id_)
+        : lon{lon_}, lat{lat_}, node_id{node_id_}
     {
     }
     QueryNode()
         : lon{std::numeric_limits<value_type>::max()}, lat{std::numeric_limits<value_type>::max()},
-          node_id(SPECIAL_OSM_NODEID)
+          node_id{SPECIAL_OSM_NODEID}
     {
     }
 

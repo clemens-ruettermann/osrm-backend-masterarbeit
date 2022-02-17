@@ -50,6 +50,7 @@ BOOST_AUTO_TEST_CASE(trim_short_segments)
                                      0.2,
                                      1.9076601161280742,
                                      0.2,
+									 23,
                                      TRAVEL_MODE_DRIVING,
                                      {{FloatLongitude{-73.981492}, FloatLatitude{40.768258}},
                                       329,
@@ -74,6 +75,7 @@ BOOST_AUTO_TEST_CASE(trim_short_segments)
                                      0,
                                      0,
                                      0,
+									 42,
                                      TRAVEL_MODE_DRIVING,
                                      {{FloatLongitude{-73.981495}, FloatLatitude{40.768275}},
                                       0,
@@ -93,7 +95,7 @@ BOOST_AUTO_TEST_CASE(trim_short_segments)
     geometry.segment_offsets = {0, 2};
     geometry.segment_distances = {1.9076601161280742};
     geometry.osm_node_ids = {OSMNodeID{0}, OSMNodeID{1}, OSMNodeID{2}};
-    geometry.annotations = {{1.9076601161280742, 0.2, 0.2, 0}, {0, 0, 0, 0}};
+    geometry.annotations = {{1.9076601161280742, 0.2, 0.2, 23}, {0, 0, 0, 0}};
 
     trimShortSegments(steps, geometry);
 

@@ -112,6 +112,11 @@ void EdgeBasedGraphFactory::GetEdgeBasedNodeDistances(
     swap(m_edge_based_node_distances, output_node_distances);
 }
 
+void EdgeBasedGraphFactory::GetEdgeBasedNodeCosumptions(
+		std::vector<EdgeConsumption> &output_node_consumptions)
+{
+	std::swap(m_edge_based_node_consumption, output_node_consumptions);
+}
 std::uint32_t EdgeBasedGraphFactory::GetConnectivityChecksum() const
 {
     return m_connectivity_checksum;
@@ -294,6 +299,7 @@ unsigned EdgeBasedGraphFactory::LabelEdgeBasedNodes()
                                         m_node_based_graph.GetNumberOfNodes());
     m_edge_based_node_distances.reserve(ESTIMATED_EDGE_COUNT *
                                         m_node_based_graph.GetNumberOfNodes());
+	m_edge_based_node_consumption.reserve(ESTIMATED_EDGE_COUNT * m_node_based_graph.GetNumberOfNodes());
     nbe_to_ebn_mapping.resize(m_node_based_graph.GetEdgeCapacity(), SPECIAL_NODEID);
 
     // renumber edge based node of outgoing edges
@@ -311,7 +317,8 @@ unsigned EdgeBasedGraphFactory::LabelEdgeBasedNodes()
 
             m_edge_based_node_weights.push_back(edge_data.weight);
             m_edge_based_node_durations.push_back(edge_data.duration);
-            m_edge_based_node_distances.push_back(edge_data.distance);
+	        m_edge_based_node_distances.push_back(edge_data.distance);
+			m_edge_based_node_consumption.push_back(edge_data.consumption);
 
             BOOST_ASSERT(numbered_edges_count < m_node_based_graph.GetNumberOfEdges());
             nbe_to_ebn_mapping[current_edge] = numbered_edges_count;
@@ -411,6 +418,8 @@ EdgeBasedGraphFactory::GenerateEdgeExpandedNodes(const WayRestrictionMap &way_re
                 m_edge_based_node_durations[nbe_to_ebn_mapping[eid]]);
             m_edge_based_node_distances.push_back(
                 m_edge_based_node_distances[nbe_to_ebn_mapping[eid]]);
+			m_edge_based_node_consumption.push_back(
+				m_edge_based_node_consumption[nbe_to_ebn_mapping[eid]]);
 
             // Include duplicate nodes in cnbg to ebg mapping. This means a
             // compressed node pair (u,v) can appear multiple times in this list.
@@ -427,6 +436,7 @@ EdgeBasedGraphFactory::GenerateEdgeExpandedNodes(const WayRestrictionMap &way_re
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_weights.size());
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_durations.size());
     BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_distances.size());
+    BOOST_ASSERT(m_number_of_edge_based_nodes == m_edge_based_node_consumption.size());
 
     util::Log() << "Generated " << m_number_of_edge_based_nodes << " nodes ("
                 << way_restriction_map.NumberOfDuplicatedNodes()
@@ -631,6 +641,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
             auto weight = boost::numeric_cast<EdgeWeight>(edge_data1.weight + weight_penalty);
             auto duration = boost::numeric_cast<EdgeWeight>(edge_data1.duration + duration_penalty);
             auto distance = boost::numeric_cast<EdgeDistance>(edge_data1.distance);
+            auto consumption = boost::numeric_cast<EdgeConsumption>(edge_data1.consumption);
 
             EdgeBasedEdge edge_based_edge = {edge_based_node_from,
                                              edge_based_node_to,
@@ -639,6 +650,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                              weight,
                                              duration,
                                              distance,
+											 consumption,
                                              true,
                                              false};
 
@@ -681,10 +693,8 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                 {
                     // We capture the thread-local work in these objects, then flush them in a
                     // controlled manner at the end of the parallel range
-                    const auto &incoming_edges =
-                        intersection::getIncomingEdges(m_node_based_graph, intersection_node);
-                    const auto &outgoing_edges =
-                        intersection::getOutgoingEdges(m_node_based_graph, intersection_node);
+                    const auto &incoming_edges = intersection::getIncomingEdges(m_node_based_graph, intersection_node);
+                    const auto &outgoing_edges = intersection::getOutgoingEdges(m_node_based_graph, intersection_node);
 
                     intersection::IntersectionEdgeGeometries edge_geometries;
                     std::unordered_set<EdgeID> merged_edge_ids;
@@ -786,10 +796,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                         intersection_node);
                                     if (reversed_edge != SPECIAL_EDGEID)
                                     {
-                                        const auto &reversed_edge_data =
-                                            m_node_based_graph.GetEdgeData(reversed_edge);
-
-                                        if (!reversed_edge_data.reversed)
+                                        if (!m_node_based_graph.GetEdgeData(reversed_edge).reversed)
                                         {
                                             is_incoming = true;
                                         }
@@ -891,8 +898,7 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
 
                             /***************************/
 
-                            const auto outgoing_edge_target =
-                                m_node_based_graph.GetTarget(outgoing_edge.edge);
+                            const auto outgoing_edge_target = m_node_based_graph.GetTarget(outgoing_edge.edge);
 
                             // TODO: this loop is not optimized - once we have a few
                             //       overrides available, we should index this for faster
@@ -905,11 +911,9 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                         turn.via == intersection_node &&
                                         turn.to == outgoing_edge_target)
                                     {
-                                        const auto &ebn_from =
-                                            nbe_to_ebn_mapping[incoming_edge.edge];
+                                        const auto &ebn_from = nbe_to_ebn_mapping[incoming_edge.edge];
                                         const auto &ebn_to = target_id;
-                                        buffer->turn_to_ebn_map[turn] =
-                                            std::make_pair(ebn_from, ebn_to);
+                                        buffer->turn_to_ebn_map[turn] = std::make_pair(ebn_from, ebn_to);
                                     }
                                 }
                             }
@@ -965,17 +969,14 @@ void EdgeBasedGraphFactory::GenerateEdgeExpandedEdges(
                                                way_restriction_map.NumberOfDuplicatedNodes() +
                                                duplicated_node_id);
 
-                                    auto const node_at_end_of_turn =
-                                        m_node_based_graph.GetTarget(outgoing_edge.edge);
+                                    auto const node_at_end_of_turn = m_node_based_graph.GetTarget(outgoing_edge.edge);
 
-                                    const auto is_restricted = way_restriction_map.IsRestricted(
-                                        duplicated_node_id, node_at_end_of_turn);
+                                    const auto is_restricted = way_restriction_map.IsRestricted(duplicated_node_id, node_at_end_of_turn);
 
                                     if (is_restricted)
                                     {
                                         auto const &restrictions =
-                                            way_restriction_map.GetRestrictions(
-                                                duplicated_node_id, node_at_end_of_turn);
+                                            way_restriction_map.GetRestrictions(duplicated_node_id, node_at_end_of_turn);
 
                                         auto const has_unconditional =
                                             std::any_of(restrictions.begin(),

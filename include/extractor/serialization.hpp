@@ -14,6 +14,7 @@
 
 #include "storage/io.hpp"
 #include "storage/serialization.hpp"
+#include "util/car.hpp"
 
 #include <boost/assert.hpp>
 
@@ -23,6 +24,8 @@ namespace extractor
 {
 namespace serialization
 {
+
+
 
 // read/write for bearing data
 template <storage::Ownership Ownership>
@@ -86,12 +89,12 @@ inline void read(storage::tar::FileReader &reader,
     storage::serialization::read(reader, name + "/nodes", segment_data.nodes);
     util::serialization::read(reader, name + "/forward_weights", segment_data.fwd_weights);
     util::serialization::read(reader, name + "/reverse_weights", segment_data.rev_weights);
+	storage::serialization::read(reader, name + "/forward_consumptions", segment_data.fwd_consumptions);
+	storage::serialization::read(reader, name + "/reverse_consumptions", segment_data.rev_consumptions);
     util::serialization::read(reader, name + "/forward_durations", segment_data.fwd_durations);
     util::serialization::read(reader, name + "/reverse_durations", segment_data.rev_durations);
-    storage::serialization::read(
-        reader, name + "/forward_data_sources", segment_data.fwd_datasources);
-    storage::serialization::read(
-        reader, name + "/reverse_data_sources", segment_data.rev_datasources);
+    storage::serialization::read(reader, name + "/forward_data_sources", segment_data.fwd_datasources);
+    storage::serialization::read(reader, name + "/reverse_data_sources", segment_data.rev_datasources);
 }
 
 template <storage::Ownership Ownership>
@@ -105,10 +108,10 @@ inline void write(storage::tar::FileWriter &writer,
     util::serialization::write(writer, name + "/reverse_weights", segment_data.rev_weights);
     util::serialization::write(writer, name + "/forward_durations", segment_data.fwd_durations);
     util::serialization::write(writer, name + "/reverse_durations", segment_data.rev_durations);
-    storage::serialization::write(
-        writer, name + "/forward_data_sources", segment_data.fwd_datasources);
-    storage::serialization::write(
-        writer, name + "/reverse_data_sources", segment_data.rev_datasources);
+	storage::serialization::write(writer, name + "/forward_consumptions", segment_data.fwd_consumptions);
+	storage::serialization::write(writer, name + "/reverse_consumptions", segment_data.rev_consumptions);
+    storage::serialization::write(writer, name + "/forward_data_sources", segment_data.fwd_datasources);
+    storage::serialization::write(writer, name + "/reverse_data_sources", segment_data.rev_datasources);
 }
 
 template <storage::Ownership Ownership>
@@ -118,8 +121,7 @@ inline void read(storage::tar::FileReader &reader,
 {
     // read actual data
     storage::serialization::read(reader, name + "/nodes", node_data_container.nodes);
-    storage::serialization::read(
-        reader, name + "/annotations", node_data_container.annotation_data);
+    storage::serialization::read(reader, name + "/annotations", node_data_container.annotation_data);
 }
 
 template <storage::Ownership Ownership>
@@ -128,8 +130,7 @@ inline void write(storage::tar::FileWriter &writer,
                   const detail::EdgeBasedNodeDataContainerImpl<Ownership> &node_data_container)
 {
     storage::serialization::write(writer, name + "/nodes", node_data_container.nodes);
-    storage::serialization::write(
-        writer, name + "/annotations", node_data_container.annotation_data);
+    storage::serialization::write(writer, name + "/annotations", node_data_container.annotation_data);
 }
 
 inline void read(storage::io::BufferReader &reader, ConditionalTurnPenalty &turn_penalty)

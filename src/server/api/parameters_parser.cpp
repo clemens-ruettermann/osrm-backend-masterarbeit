@@ -6,6 +6,8 @@
 #include "server/api/table_parameter_grammar.hpp"
 #include "server/api/tile_parameter_grammar.hpp"
 #include "server/api/trip_parameter_grammar.hpp"
+#include "engine/api/ev_route_parameters.hpp"
+#include "server/api/ev_route_parameter_grammar.hpp"
 
 #include <type_traits>
 
@@ -26,6 +28,7 @@ using is_grammar_t =
                                std::is_same<NearestParametersGrammar<>, T>::value ||
                                std::is_same<TripParametersGrammar<>, T>::value ||
                                std::is_same<MatchParametersGrammar<>, T>::value ||
+                               std::is_same<EVRouteParametersGrammar<>, T>::value ||
                                std::is_same<TileParametersGrammar<>, T>::value>;
 
 template <typename ParameterT,
@@ -109,6 +112,14 @@ boost::optional<engine::api::TileParameters> parseParameters(std::string::iterat
 {
     return detail::parseParameters<engine::api::TileParameters, TileParametersGrammar<>>(iter, end);
 }
+
+template <>
+boost::optional<engine::api::EVRouteParameters> parseParameters(std::string::iterator &iter,
+                                                              const std::string::iterator end)
+{
+	return detail::parseParameters<engine::api::EVRouteParameters, EVRouteParametersGrammar<>>(iter, end);
+}
+
 
 } // namespace api
 } // namespace server

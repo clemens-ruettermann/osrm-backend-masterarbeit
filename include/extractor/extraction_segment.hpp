@@ -8,6 +8,7 @@ namespace osrm
 namespace extractor
 {
 
+// Note consumption will not be calculated in lua and as such it is not necessary to add it here
 struct ExtractionSegment
 {
     ExtractionSegment(const osrm::util::Coordinate source_,

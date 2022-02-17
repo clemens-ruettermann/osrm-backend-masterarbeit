@@ -87,7 +87,8 @@ void insertSourceInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     -phantom_node.GetForwardWeightPlusOffset(),
                     {phantom_node.forward_segment_id.id,
                      -phantom_node.GetForwardDuration(),
-                     -phantom_node.GetForwardDistance()});
+                     -phantom_node.GetForwardDistance(),
+					 -phantom_node.GetForwardConsumption()});
     }
     if (phantom_node.IsValidReverseSource())
     {
@@ -95,7 +96,8 @@ void insertSourceInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     -phantom_node.GetReverseWeightPlusOffset(),
                     {phantom_node.reverse_segment_id.id,
                      -phantom_node.GetReverseDuration(),
-                     -phantom_node.GetReverseDistance()});
+                     -phantom_node.GetReverseDistance(),
+					 -phantom_node.GetReverseConsumption()});
     }
 }
 
@@ -108,7 +110,8 @@ void insertTargetInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     phantom_node.GetForwardWeightPlusOffset(),
                     {phantom_node.forward_segment_id.id,
                      phantom_node.GetForwardDuration(),
-                     phantom_node.GetForwardDistance()});
+                     phantom_node.GetForwardDistance(),
+					 phantom_node.GetForwardConsumption()});
     }
     if (phantom_node.IsValidReverseTarget())
     {
@@ -116,7 +119,8 @@ void insertTargetInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     phantom_node.GetReverseWeightPlusOffset(),
                     {phantom_node.reverse_segment_id.id,
                      phantom_node.GetReverseDuration(),
-                     phantom_node.GetReverseDistance()});
+                     phantom_node.GetReverseDistance(),
+					 phantom_node.GetReverseConsumption()});
     }
 }
 
@@ -132,10 +136,8 @@ void annotatePath(const FacadeT &facade,
 
     const auto source_node_id = unpacked_nodes.front();
     const auto target_node_id = unpacked_nodes.back();
-    const bool start_traversed_in_reverse =
-        phantom_node_pair.source_phantom.forward_segment_id.id != source_node_id;
-    const bool target_traversed_in_reverse =
-        phantom_node_pair.target_phantom.forward_segment_id.id != target_node_id;
+    const bool start_traversed_in_reverse = phantom_node_pair.source_phantom.forward_segment_id.id != source_node_id;
+    const bool target_traversed_in_reverse = phantom_node_pair.target_phantom.forward_segment_id.id != target_node_id;
 
     BOOST_ASSERT(phantom_node_pair.source_phantom.forward_segment_id.id == source_node_id ||
                  phantom_node_pair.source_phantom.reverse_segment_id.id == source_node_id);
@@ -146,6 +148,7 @@ void annotatePath(const FacadeT &facade,
     std::vector<NodeID> id_vector;
     std::vector<SegmentWeight> weight_vector;
     std::vector<SegmentDuration> duration_vector;
+    std::vector<SegmentConsumption> consumption_vector;
     std::vector<DatasourceID> datasource_vector;
 
     const auto get_segment_geometry = [&](const auto geometry_index) {
@@ -159,6 +162,7 @@ void annotatePath(const FacadeT &facade,
             copy(id_vector, facade.GetUncompressedForwardGeometry(geometry_index.id));
             copy(weight_vector, facade.GetUncompressedForwardWeights(geometry_index.id));
             copy(duration_vector, facade.GetUncompressedForwardDurations(geometry_index.id));
+			copy(consumption_vector, facade.GetUncompressedForwardConsumptions(geometry_index.id));
             copy(datasource_vector, facade.GetUncompressedForwardDatasources(geometry_index.id));
         }
         else
@@ -166,6 +170,7 @@ void annotatePath(const FacadeT &facade,
             copy(id_vector, facade.GetUncompressedReverseGeometry(geometry_index.id));
             copy(weight_vector, facade.GetUncompressedReverseWeights(geometry_index.id));
             copy(duration_vector, facade.GetUncompressedReverseDurations(geometry_index.id));
+	        copy(consumption_vector, facade.GetUncompressedReverseConsumptions(geometry_index.id));
             copy(datasource_vector, facade.GetUncompressedReverseDatasources(geometry_index.id));
         }
     };
@@ -185,10 +190,12 @@ void annotatePath(const FacadeT &facade,
         const auto geometry_index = facade.GetGeometryIndex(node_id);
         get_segment_geometry(geometry_index);
 
-        BOOST_ASSERT(id_vector.size() > 0);
-        BOOST_ASSERT(datasource_vector.size() > 0);
+        BOOST_ASSERT(!id_vector.empty());
+        BOOST_ASSERT(!datasource_vector.empty());
         BOOST_ASSERT(weight_vector.size() + 1 == id_vector.size());
         BOOST_ASSERT(duration_vector.size() + 1 == id_vector.size());
+        BOOST_ASSERT(consumption_vector.size() + 1 == id_vector.size());
+
 
         const bool is_first_segment = unpacked_path.empty();
 
@@ -198,8 +205,7 @@ void annotatePath(const FacadeT &facade,
             unsigned short segment_position = phantom_node_pair.source_phantom.fwd_segment_position;
             if (start_traversed_in_reverse)
             {
-                segment_position = weight_vector.size() -
-                                   phantom_node_pair.source_phantom.fwd_segment_position - 1;
+                segment_position = weight_vector.size() - phantom_node_pair.source_phantom.fwd_segment_position - 1;
             }
             BOOST_ASSERT(segment_position >= 0);
             start_index = static_cast<std::size_t>(segment_position);
@@ -211,7 +217,7 @@ void annotatePath(const FacadeT &facade,
         BOOST_ASSERT(start_index < end_index);
         for (std::size_t segment_idx = start_index; segment_idx < end_index; ++segment_idx)
         {
-            unpacked_path.push_back(
+			unpacked_path.push_back(
                 PathData{*node_from,
                          id_vector[segment_idx + 1],
                          name_index,
@@ -220,8 +226,9 @@ void annotatePath(const FacadeT &facade,
                          0,
                          static_cast<EdgeDuration>(duration_vector[segment_idx]),
                          0,
+						 static_cast<EdgeConsumption>(consumption_vector[segment_idx]),
                          guidance::TurnInstruction::NO_TURN(),
-                         {{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
+                         osrm::util::guidance::LaneTupleIdPair{osrm::util::guidance::LaneTuple{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                          travel_mode,
                          classes,
                          EMPTY_ENTRY_CLASS,
@@ -231,8 +238,9 @@ void annotatePath(const FacadeT &facade,
                          is_left_hand_driving});
         }
         BOOST_ASSERT(unpacked_path.size() > 0);
-        if (facade.HasLaneData(turn_id))
-            unpacked_path.back().lane_data = facade.GetLaneData(turn_id);
+        if (facade.HasLaneData(turn_id)) {
+	        unpacked_path.back().lane_data = facade.GetLaneData(turn_id);
+        }
 
         const auto turn_duration = facade.GetDurationPenaltyForEdgeID(turn_id);
         const auto turn_weight = facade.GetWeightPenaltyForEdgeID(turn_id);
@@ -254,20 +262,13 @@ void annotatePath(const FacadeT &facade,
 
     get_segment_geometry(target_geometry);
 
-    if (target_traversed_in_reverse)
-    {
-        if (is_local_path)
-        {
-            start_index =
-                weight_vector.size() - phantom_node_pair.source_phantom.fwd_segment_position - 1;
+    if (target_traversed_in_reverse) {
+        if (is_local_path) {
+            start_index = weight_vector.size() - phantom_node_pair.source_phantom.fwd_segment_position - 1;
         }
-        end_index =
-            weight_vector.size() - phantom_node_pair.target_phantom.fwd_segment_position - 1;
-    }
-    else
-    {
-        if (is_local_path)
-        {
+        end_index = weight_vector.size() - phantom_node_pair.target_phantom.fwd_segment_position - 1;
+    } else {
+        if (is_local_path) {
             start_index = phantom_node_pair.source_phantom.fwd_segment_position;
         }
         end_index = phantom_node_pair.target_phantom.fwd_segment_position;
@@ -295,8 +296,9 @@ void annotatePath(const FacadeT &facade,
                      0,
                      static_cast<EdgeDuration>(duration_vector[segment_idx]),
                      0,
+					 static_cast<EdgeConsumption>(consumption_vector[segment_idx]),
                      guidance::TurnInstruction::NO_TURN(),
-                     {{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
+                     osrm::util::guidance::LaneTupleIdPair{osrm::util::guidance::LaneTuple{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                      facade.GetTravelMode(target_node_id),
                      facade.GetClassData(target_node_id),
                      EMPTY_ENTRY_CLASS,
@@ -314,6 +316,9 @@ void annotatePath(const FacadeT &facade,
         const auto source_duration = start_traversed_in_reverse
                                          ? phantom_node_pair.source_phantom.reverse_duration
                                          : phantom_node_pair.source_phantom.forward_duration;
+		const auto source_consumption = start_traversed_in_reverse
+										? phantom_node_pair.source_phantom.reverse_consumption
+										: phantom_node_pair.source_phantom.forward_consumption;
         // The above code will create segments for (v, w), (w,x), (x, y) and (y, Z).
         // However the first segment duration needs to be adjusted to the fact that the source
         // phantom is in the middle of the segment. We do this by subtracting v--s from the
@@ -327,10 +332,9 @@ void annotatePath(const FacadeT &facade,
         // TODO this creates a scenario where it's possible the duration from a phantom
         // node to the first turn would be the same as from end to end of a segment,
         // which is obviously incorrect and not ideal...
-        unpacked_path.front().weight_until_turn =
-            std::max(unpacked_path.front().weight_until_turn - source_weight, 0);
-        unpacked_path.front().duration_until_turn =
-            std::max(unpacked_path.front().duration_until_turn - source_duration, 0);
+        unpacked_path.front().weight_until_turn = std::max(unpacked_path.front().weight_until_turn - source_weight, 0);
+        unpacked_path.front().duration_until_turn = std::max(unpacked_path.front().duration_until_turn - source_duration, 0);
+		unpacked_path.front().consumption_until_turn = unpacked_path.front().consumption_until_turn - source_consumption;
     }
 }
 
@@ -344,19 +348,14 @@ double getPathDistance(const DataFacade<Algorithm> &facade,
     using util::coordinate_calculation::detail::EARTH_RADIUS;
 
     double distance = 0;
-    double prev_lat =
-        static_cast<double>(util::toFloating(source_phantom.location.lat)) * DEGREE_TO_RAD;
-    double prev_lon =
-        static_cast<double>(util::toFloating(source_phantom.location.lon)) * DEGREE_TO_RAD;
+    double prev_lat = static_cast<double>(util::toFloating(source_phantom.location.lat)) * DEGREE_TO_RAD;
+    double prev_lon = static_cast<double>(util::toFloating(source_phantom.location.lon)) * DEGREE_TO_RAD;
     double prev_cos = std::cos(prev_lat);
-    for (const auto &p : unpacked_path)
-    {
+    for (const auto &p : unpacked_path) {
         const auto current_coordinate = facade.GetCoordinateOfNode(p.turn_via_node);
 
-        const double current_lat =
-            static_cast<double>(util::toFloating(current_coordinate.lat)) * DEGREE_TO_RAD;
-        const double current_lon =
-            static_cast<double>(util::toFloating(current_coordinate.lon)) * DEGREE_TO_RAD;
+        const double current_lat = static_cast<double>(util::toFloating(current_coordinate.lat)) * DEGREE_TO_RAD;
+        const double current_lon = static_cast<double>(util::toFloating(current_coordinate.lon)) * DEGREE_TO_RAD;
         const double current_cos = std::cos(current_lat);
 
         const double sin_dlon = std::sin((prev_lon - current_lon) / 2.0);
@@ -371,10 +370,8 @@ double getPathDistance(const DataFacade<Algorithm> &facade,
         prev_cos = current_cos;
     }
 
-    const double current_lat =
-        static_cast<double>(util::toFloating(target_phantom.location.lat)) * DEGREE_TO_RAD;
-    const double current_lon =
-        static_cast<double>(util::toFloating(target_phantom.location.lon)) * DEGREE_TO_RAD;
+    const double current_lat = static_cast<double>(util::toFloating(target_phantom.location.lat)) * DEGREE_TO_RAD;
+    const double current_lon = static_cast<double>(util::toFloating(target_phantom.location.lon)) * DEGREE_TO_RAD;
     const double current_cos = std::cos(current_lat);
 
     const double sin_dlon = std::sin((prev_lon - current_lon) / 2.0);
@@ -405,10 +402,8 @@ InternalRouteResult extractRoute(const DataFacade<AlgorithmT> &facade,
 
     raw_route_data.shortest_path_weight = weight;
     raw_route_data.unpacked_path_segments.resize(1);
-    raw_route_data.source_traversed_in_reverse.push_back(
-        (unpacked_nodes.front() != phantom_nodes.source_phantom.forward_segment_id.id));
-    raw_route_data.target_traversed_in_reverse.push_back(
-        (unpacked_nodes.back() != phantom_nodes.target_phantom.forward_segment_id.id));
+    raw_route_data.source_traversed_in_reverse.push_back( (unpacked_nodes.front() != phantom_nodes.source_phantom.forward_segment_id.id));
+    raw_route_data.target_traversed_in_reverse.push_back( (unpacked_nodes.back() != phantom_nodes.target_phantom.forward_segment_id.id));
 
     annotatePath(facade,
                  phantom_nodes,
@@ -419,21 +414,24 @@ InternalRouteResult extractRoute(const DataFacade<AlgorithmT> &facade,
     return raw_route_data;
 }
 
+
 template <typename FacadeT> EdgeDistance computeEdgeDistance(const FacadeT &facade, NodeID node_id)
 {
-    const auto geometry_index = facade.GetGeometryIndex(node_id);
+	const auto geometry_index = facade.GetGeometryIndex(node_id);
 
-    EdgeDistance total_distance = 0.0;
+	EdgeDistance total_distance = 0.0;
 
-    auto geometry_range = facade.GetUncompressedForwardGeometry(geometry_index.id);
-    for (auto current = geometry_range.begin(); current < geometry_range.end() - 1; ++current)
-    {
-        total_distance += util::coordinate_calculation::fccApproximateDistance(
-            facade.GetCoordinateOfNode(*current), facade.GetCoordinateOfNode(*std::next(current)));
-    }
+	auto geometry_range = facade.GetUncompressedForwardGeometry(geometry_index.id);
+	for (auto current = geometry_range.begin(); current < geometry_range.end() - 1; ++current)
+	{
+		total_distance += util::coordinate_calculation::fccApproximateDistance(
+				facade.GetCoordinateOfNode(*current), facade.GetCoordinateOfNode(*std::next(current)));
+	}
 
-    return total_distance;
+	return total_distance;
 }
+
+
 
 } // namespace routing_algorithms
 } // namespace engine

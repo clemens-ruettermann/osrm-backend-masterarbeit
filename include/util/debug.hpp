@@ -39,6 +39,7 @@ inline std::ostream &operator<<(std::ostream &out, const RouteStep &step)
         << static_cast<int>(step.maneuver.instruction.direction_modifier) << "  "
         << static_cast<int>(step.maneuver.waypoint_type) << " " << step.maneuver.location << " "
         << " Duration: " << step.duration << " Distance: " << step.distance
+        << " Consumption: " << step.consumption
         << " Geometry: " << step.geometry_begin << " " << step.geometry_end
         << " Exit: " << step.maneuver.exit << " Mode: " << (int)step.mode
         << "\n\tIntersections: " << step.intersections.size() << " [";
