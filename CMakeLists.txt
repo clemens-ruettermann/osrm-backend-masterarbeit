@@ -54,9 +54,9 @@ if(ENABLE_MASON)
 endif()
 
 # be compatible with version handling before cmake 3.x
-if (POLICY CMP0048)
-  cmake_policy(SET CMP0048 OLD)
-endif()
+#if (POLICY CMP0048)
+#  cmake_policy(SET CMP0048 OLD)
+#endif()
 if (POLICY CMP0057)
   cmake_policy(SET CMP0057 NEW)
 endif()
@@ -153,6 +153,7 @@ file(GLOB StorageGlob src/storage/*.cpp)
 file(GLOB ServerGlob src/server/*.cpp src/server/**/*.cpp)
 file(GLOB EngineGlob src/engine/*.cpp src/engine/**/*.cpp)
 file(GLOB ErrorcodesGlob src/osrm/errorcodes.cpp)
+file(GLOB ENavGlob src/enav/*)
 
 add_library(UTIL OBJECT ${UtilGlob})
 add_library(EXTRACTOR OBJECT ${ExtractorGlob})
@@ -164,7 +165,8 @@ add_library(UPDATER OBJECT ${UpdaterGlob})
 add_library(STORAGE OBJECT ${StorageGlob})
 add_library(ENGINE OBJECT ${EngineGlob})
 
-if (BUILD_ROUTED) 
+
+if (BUILD_ROUTED)
   add_library(SERVER OBJECT ${ServerGlob})
   add_executable(osrm-routed src/tools/routed.cpp $<TARGET_OBJECTS:SERVER> $<TARGET_OBJECTS:UTIL>)
 endif()
@@ -184,6 +186,21 @@ add_library(osrm_partition src/osrm/partitioner.cpp $<TARGET_OBJECTS:PARTITIONER
 add_library(osrm_customize src/osrm/customizer.cpp $<TARGET_OBJECTS:CUSTOMIZER> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_update $<TARGET_OBJECTS:UPDATER> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
 add_library(osrm_store $<TARGET_OBJECTS:STORAGE> $<TARGET_OBJECTS:MICROTAR> $<TARGET_OBJECTS:UTIL>)
+
+add_executable(enav
+#        src/enav/charger.hpp
+#        src/enav/charger_utils.hpp
+        src/enav/enav_utils.hpp
+        src/enav/car.hpp
+        src/enav/car.cpp
+        src/enav/constants.hpp
+#        src/enav/charger.cpp
+        src/enav/plug_type.hpp
+        src/enav/consumption_utils.hpp
+        src/enav/consumption_utils.cpp
+        src/enav/main.cpp)
+
+#target_link_libraries(enav osrm)
 
 if(ENABLE_GOLD_LINKER)
     execute_process(COMMAND ${CMAKE_C_COMPILER} -fuse-ld=gold -Wl,--version ERROR_QUIET OUTPUT_VARIABLE LD_VERSION)
@@ -335,9 +352,9 @@ if (ENABLE_SANITIZER)
 endif()
 
 # Configuring compilers
-set(OSRM_WARNING_FLAGS "-Werror=all -Werror=extra  -Werror=uninitialized -Werror=unreachable-code -Werror=unused-variable -Werror=unreachable-code -Wno-error=cpp -Wpedantic")
+#set(OSRM_WARNING_FLAGS "-Werror=all -Werror=extra  -Werror=uninitialized -Werror=unreachable-code -Werror=unused-variable -Werror=unreachable-code -Wno-error=cpp -Wpedantic")
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=2 -Wno-error=unused-local-typedef -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fPIC -fcolor-diagnostics -ftemplate-depth=1024 -Wno-unused-command-line-argument")
+#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=2 -Wno-error=unused-local-typedef -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 -fPIC -fcolor-diagnostics -ftemplate-depth=1024 -Wno-unused-command-line-argument")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   set(COLOR_FLAG "-fdiagnostics-color=auto")
   check_cxx_compiler_flag("-fdiagnostics-color=auto" HAS_COLOR_FLAG)
@@ -345,7 +362,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(COLOR_FLAG "")
   endif()
   # using GCC
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=1 -Wno-error=maybe-uninitialized -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 ${COLOR_FLAG} -fPIC -ftemplate-depth=1024")
+#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OSRM_WARNING_FLAGS} -Werror=strict-overflow=1 -Wno-error=maybe-uninitialized -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 ${COLOR_FLAG} -fPIC -ftemplate-depth=1024")
 
   if(WIN32) # using mingw
     add_dependency_defines(-DWIN32)
@@ -361,7 +378,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
 
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
   # using Intel C++
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-intel -wd10237 -Wall -ipo -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-intel -wd10237 -ipo -fPIC") #-Wall
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   # using Visual Studio C++
   set(BOOST_COMPONENTS ${BOOST_COMPONENTS} zlib)
@@ -432,6 +449,11 @@ include_directories(SYSTEM ${RAPIDJSON_INCLUDE_DIR})
 
 set(MICROTAR_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/microtar/src")
 include_directories(SYSTEM ${MICROTAR_INCLUDE_DIR})
+
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann-json/")
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/fast-cpp-csv-parser/")
+
+
 
 set(MBXGEOM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/geometry.hpp-0.9.2/include")
 include_directories(SYSTEM ${MBXGEOM_INCLUDE_DIR})
@@ -523,7 +545,7 @@ if(ENABLE_MASON)
   include_directories(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libosmium/include)
 else()
   if (BUILD_ROUTED)
-    # osrm-routed requires newer boost:asio 
+    # osrm-routed requires newer boost:asio
     find_package(Boost 1.70 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
   else()
     find_package(Boost 1.60 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
@@ -888,6 +910,6 @@ if (ENABLE_NODE_BINDINGS)
     endif()
     list(APPEND sources ${filename})
   endforeach()
-  add_library(check-headers STATIC EXCLUDE_FROM_ALL ${sources})
+  add_library(check-headers STATIC EXCLUDE_FROM_ALL ${sources} src/enav/charger.hpp src/enav/enav_utils.hpp src/enav/enav_utils.cpp src/enav/car.cpp src/enav/car.hpp)
   set_target_properties(check-headers PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${check_headers_dir})
 endif()

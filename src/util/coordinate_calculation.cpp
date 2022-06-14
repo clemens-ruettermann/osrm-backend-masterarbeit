@@ -115,6 +115,11 @@ double haversineDistance(const Coordinate coordinate_1, const Coordinate coordin
     return detail::EARTH_RADIUS * charv;
 }
 
+
+double haversineWithElevation(const Coordinate coordinate_1, const Coordinate coordinate_2, double elevation_1, double elevation_2) {
+	return std::sqrt(std::pow(haversineDistance(coordinate_1, coordinate_2), 2) + std::pow(elevation_1-elevation_2, 2));
+}
+
 double greatCircleDistance(const Coordinate coordinate_1, const Coordinate coordinate_2)
 {
     auto lon1 = static_cast<int>(coordinate_1.lon);

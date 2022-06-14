@@ -2,14 +2,14 @@
 
 api_version = 4
 
-Set = require('lib/set')
-Sequence = require('lib/sequence')
-Handlers = require("lib/way_handlers")
-Relations = require("lib/relations")
-find_access_tag = require("lib/access").find_access_tag
-limit = require("lib/maxspeed").limit
-Utils = require("lib/utils")
-Measure = require("lib/measure")
+Set = require("lib/set.lua")
+Sequence = require("lib/sequence.lua")
+Handlers = require("lib/way_handlers.lua")
+Relations = require("lib/relations.lua")
+find_access_tag = require("lib/access.lua").find_access_tag
+limit = require("lib/maxspeed.lua").limit
+Utils = require("lib/utils.lua")
+Measure = require("lib/measure.lua")
 
 function setup()
   return {
