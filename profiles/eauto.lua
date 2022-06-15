@@ -31,6 +31,7 @@ function setup()
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     car = {
         name                    = 'VW Id4',
         wltp                    = 18.3,
@@ -48,6 +49,8 @@ function setup()
 >>>>>>> 00eba0c37 (Started Implementing)
 =======
 >>>>>>> b4e728359 (Add nlohmann and fast-cpp-csv-parser to cmakelists + add masterarbeits files)
+=======
+>>>>>>> origin/master
     default_mode              = mode.driving,
     default_speed             = 10,
     oneway_handling           = true,
