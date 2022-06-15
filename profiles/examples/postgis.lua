@@ -32,7 +32,7 @@ print("PostGIS connection opened")
 
 -- these settings are read directly by osrm
 take_minimum_of_speeds   = true
-obey_oneway             = true
+obey_oneway              = true
 use_restrictions         = true
 ignore_areas             = true  -- future feature
 traffic_signal_penalty   = 7      -- seconds

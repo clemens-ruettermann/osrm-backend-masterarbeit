@@ -34,12 +34,15 @@ function setup()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 8fe802ef5 (Car type added to lua; calculation of the elevation added; consumption calculation added; Started changing consumption value type to std::int32_t (not std::uint32_t))
 =======
 >>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> origin/add_consumption
     car = {
         name                    = 'VW Id4',
         wltp                    = 18.3,
@@ -51,16 +54,20 @@ function setup()
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> origin/add_consumption
         base_battery_capacity   = 77,
     	supported_plug_types	= {
 	    	'Typ 2',
 		    'AC Kupplung Typ 2',
 		    'AC Steckdose Typ 2'
 	    }
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -99,15 +106,22 @@ function setup()
 
 >>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
     },
 
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 =======
 >>>>>>> b4e728359 (Add nlohmann and fast-cpp-csv-parser to cmakelists + add masterarbeits files)
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> b4e728359 (Add nlohmann and fast-cpp-csv-parser to cmakelists + add masterarbeits files)
+=======
+=======
+>>>>>>> origin/master
+>>>>>>> origin/add_consumption
     default_mode              = mode.driving,
     default_speed             = 10,
     oneway_handling           = true,

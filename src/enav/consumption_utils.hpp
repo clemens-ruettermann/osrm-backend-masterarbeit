@@ -18,9 +18,13 @@ namespace enav {
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 static double aditional_consumptions(double temperature, bool night, bool windscreen_wipers_needed);
@@ -33,8 +37,11 @@ static double aditional_consumptions(double temperature, bool night, bool windsc
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 double aditional_consumptions(double temperature, bool night, bool windscreen_wipers_needed);
 =======
 static double aditional_consumptions(double temperature, bool night, bool windscreen_wipers_needed);
@@ -57,10 +64,15 @@ inline double get_wltp_factor(const double avg_speed);
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 
 
 /**
@@ -77,6 +89,7 @@ inline double get_wltp_factor(const double avg_speed);
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> ace6ba8fb (Continue ev specific code)
@@ -87,6 +100,13 @@ inline double get_wltp_factor(const double avg_speed);
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> ace6ba8fb (Continue ev specific code)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 double calculate_kwh_change(const enav::car * _car, const double distance, const double duration, const double avg_speed, const double slope);
 double calculate_kwh_change_v1(const enav::car * _car, const double distance, const double duration, const double avg_speed, const double slope);
 double calculate_kwh_change_v2(const enav::car * _car, const double distance, const double duration, const double avg_speed, const double slope);
@@ -96,8 +116,11 @@ double calculate_kwh_change_v3(const enav::car * _car, const double distance, co
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 inline double calculate_kwh_change(const enav::car * _car, const double distance, const double duration, const double slope);
 >>>>>>> c72258724 (Started implementing charger filtering and consumption calculations)
 =======
@@ -105,10 +128,15 @@ inline double calculate_kwh_change(const enav::car * _car, const double distance
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 
 }
 

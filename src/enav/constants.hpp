@@ -36,6 +36,7 @@
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> ace6ba8fb (Continue ev specific code)
@@ -46,6 +47,13 @@
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> ace6ba8fb (Continue ev specific code)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 // also for ordinary car tires on concrete, new asphalt, cobbles small new
 #define ASPHALT_ROLLING_COEFFICIENT 0.012
 
@@ -61,8 +69,11 @@
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 #define ASPHALT_ROLLING_COEFFICIENT 0.012
 >>>>>>> c72258724 (Started implementing charger filtering and consumption calculations)
 =======
@@ -70,10 +81,15 @@
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 #define RESISTANCE_COEFFICIENT 0.0005
 #define RECUPERATION_COEFFICIENT 0.05
 

@@ -60,3 +60,11 @@ as well as,
 `util::ScopedGeojsonLoggerGuardr<util::NodeIdVectorToLineString,0>::Write(list_of_node_ids);`
 
 `util::ScopedGeojsonLoggerGuardr<util::NodeIdVectorToLineString,1>::Write(list_of_node_ids);`
+
+
+# Re-Generating the flattbuffer header
+```
+pushd include/engine/api/flatbuffers
+../../../../third_party/flatbuffers/build/flatc --cpp --gen-all --root-type fbresult.fbs
+popd
+```

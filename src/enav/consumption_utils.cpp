@@ -11,9 +11,13 @@
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 
@@ -27,8 +31,11 @@ static double aditional_consumptions(double temperature, bool night, bool windsc
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 namespace enav {
 
 
@@ -47,10 +54,15 @@ static double aditional_consumptions(double temperature, bool night, bool windsc
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 	if (night) {
 		consumption += CONSUMPTION_NIGHT_LIGHT;
 	} else {
@@ -75,6 +87,7 @@ static double aditional_consumptions(double temperature, bool night, bool windsc
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
 >>>>>>> ace6ba8fb (Continue ev specific code)
@@ -85,6 +98,13 @@ static double aditional_consumptions(double temperature, bool night, bool windsc
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> ace6ba8fb (Continue ev specific code)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 /**
  *	Calculates road resistance based on slope and rolling coefficients
  * @param c (pointer to the used car)
@@ -99,9 +119,13 @@ static double calculate_road_resistance(const enav::car *_car, const double dist
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 	//TODO use surface provided by OSM
@@ -121,8 +145,11 @@ static double get_wltp_factor(const double avg_speed) {
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 inline double calculate_road_resistance(const enav::car *_car, const double distance, const double slope) {
 =======
 >>>>>>> ace6ba8fb (Continue ev specific code)
@@ -147,10 +174,15 @@ static double get_wltp_factor(const double avg_speed) {
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 	// Order is turned around as it is more likely that the speed will be larger that 74kmh (e.g over land roads or highways)
 	// And that way we can use branch prediction
 	if (avg_speed > WLTP_SPEED_EXTRAHIGH) {
@@ -168,9 +200,12 @@ static double get_wltp_factor(const double avg_speed) {
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> origin/add_consumption
 double calculate_kwh_change(
 =======
 inline double calculate_kwh_change(
@@ -182,11 +217,17 @@ double calculate_kwh_change(
 double calculate_kwh_change(
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 double calculate_kwh_change(
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+double calculate_kwh_change(
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 		const enav::car * _car,
 		const double distance,
 		const double duration,
@@ -205,9 +246,13 @@ double calculate_kwh_change(
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 	const double additional_consumption_kwh =
@@ -218,8 +263,11 @@ double calculate_kwh_change(
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 	//TODO testen ob Division durch Mutliplikation ersetzt werden kann
 =======
 >>>>>>> ace6ba8fb (Continue ev specific code)
@@ -235,10 +283,15 @@ double calculate_kwh_change(
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 	double driving_consumption_kwh = current_wltp * distance / METERS_IN_100KM;
 	double kwh_used = driving_consumption_kwh + additional_consumption_kwh;
 
@@ -257,8 +310,11 @@ double calculate_kwh_change(
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 
 >>>>>>> c72258724 (Started implementing charger filtering and consumption calculations)
 =======
@@ -266,10 +322,15 @@ double calculate_kwh_change(
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 	return kwh_used;
 }
 
@@ -280,8 +341,11 @@ double calculate_kwh_change(
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 
 >>>>>>> c72258724 (Started implementing charger filtering and consumption calculations)
 =======
@@ -289,8 +353,13 @@ double calculate_kwh_change(
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 }

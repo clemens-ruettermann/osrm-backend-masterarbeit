@@ -63,8 +63,11 @@ public:
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
 =======
+=======
+>>>>>>> origin/add_consumption
 
 //mass = 2124;
 //power = 150;
@@ -79,9 +82,14 @@ car id4{"ID4", 18.3, 2124, 77};
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> 00eba0c37 (Started Implementing)
 >>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
+=======
+=======
+>>>>>>> 00eba0c37 (Started Implementing)
+>>>>>>> origin/add_consumption
 }
 #endif //OSRM_SRC_ENAV_CAR_HPP_
