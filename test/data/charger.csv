@@ -1,62 +1,13 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> origin/add_consumption
 Ladesäulenregister Bundesnetzagentur;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 Hinweis: ;;;;;;;;;;;;;;;;;;;;;;;;;
 Die Liste beinhaltet die Ladeeinrichtungen aller Betreiberinnen und Betreiber, die das Anzeigeverfahren der Bundesnetzagentur vollständig ;;;;;;;;;;;;;;;;;;;;;;;;;
 abgeschlossen und einer Veröffentlichung im Internet zugestimmt haben. Die Zahl der öffentlich zugänglichen Ladeeinrichtungen in ;;;;;;;;;;;;;;;;;;;;;;;;;
 Deutschland ist daher größer als hier dargestellt. ;;;;;;;;;;;;;;;;;;;;;;;;;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-Ladesï¿½ulenregister Bundesnetzagentur;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;
-Hinweis: ;;;;;;;;;;;;;;;;;;;;;;;;;
-Die Liste beinhaltet die Ladeeinrichtungen aller Betreiberinnen und Betreiber, die das Anzeigeverfahren der Bundesnetzagentur vollstï¿½ndig ;;;;;;;;;;;;;;;;;;;;;;;;;
-abgeschlossen und einer Verï¿½ffentlichung im Internet zugestimmt haben. Die Zahl der ï¿½ffentlich zugï¿½nglichen Ladeeinrichtungen in ;;;;;;;;;;;;;;;;;;;;;;;;;
-Deutschland ist daher grï¿½ï¿½er als hier dargestellt. ;;;;;;;;;;;;;;;;;;;;;;;;;
->>>>>>> 6c21fc84e (Add charger test file)
-=======
-Ladesäulenregister Bundesnetzagentur;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;
-Hinweis: ;;;;;;;;;;;;;;;;;;;;;;;;;
-Die Liste beinhaltet die Ladeeinrichtungen aller Betreiberinnen und Betreiber, die das Anzeigeverfahren der Bundesnetzagentur vollständig ;;;;;;;;;;;;;;;;;;;;;;;;;
-abgeschlossen und einer Veröffentlichung im Internet zugestimmt haben. Die Zahl der öffentlich zugänglichen Ladeeinrichtungen in ;;;;;;;;;;;;;;;;;;;;;;;;;
-Deutschland ist daher größer als hier dargestellt. ;;;;;;;;;;;;;;;;;;;;;;;;;
->>>>>>> 99695d3a2 (DBScan neu implementiert (erfolgreich))
-=======
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> origin/add_consumption
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 Stand: 01.03.2022;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 Allgemeine Informationen;;;;;;;;;;;;;;1. Ladepunkt;;;2. Ladepunkt;;;3. Ladepunkt;;;4. Ladepunkt;;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 99695d3a2 (DBScan neu implementiert (erfolgreich))
-=======
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> origin/add_consumption
 Betreiber;Straße;Hausnummer;Adresszusatz;Postleitzahl;Ort;Bundesland;Kreis/kreisfreie Stadt;Breitengrad;Längengrad;Inbetriebnahmedatum;Anschlussleistung;Art der Ladeeinrichung;Anzahl Ladepunkte;Steckertypen1;P1 [kW];Public Key1;Steckertypen2;P2 [kW];Public Key2;Steckertypen3;P3 [kW];Public Key3;Steckertypen4;P4 [kW];Public Key4
 Albwerk GmbH & Co. KG;Ennabeurer Weg;0;;72535;Heroldstatt;Baden-Württemberg;Landkreis Alb-Donau-Kreis;48,442398;9,659075;11.01.2020;22;Normalladeeinrichtung;2;AC Steckdose Typ 2;22;;AC Steckdose Typ 2;22;;;;;;;
 Albwerk GmbH & Co. KG;Parkplatz Campingplatz;0;;72589;Westerheim;Baden-Württemberg;Landkreis Alb-Donau-Kreis;48,5105;9,609;07.01.2019;22;Normalladeeinrichtung;2;AC Steckdose Typ 2;22;;AC Steckdose Typ 2;22;;;;;;;
@@ -67,33 +18,4 @@ EnBW mobility+ AG und Co.KG ;Flurstück;313;;89129;Langenau/Seligweiler;Baden-Wür
 EnBW mobility+ AG und Co.KG ;Flurstück;313;;89129;Langenau/Seligweiler;Baden-Württemberg;Landkreis Alb-Donau-Kreis;48,456817;10,029649;18.12.2019;173;Schnellladeeinrichtung;2;DC Kupplung Combo, DC CHAdeMO;150;;AC Steckdose Typ 2;22;;;;;;;
 EnBW mobility+ AG und Co.KG ;Parkplatz Burghof;0;;89129;Langenau;Baden-Württemberg;Landkreis Alb-Donau-Kreis;48,5000571;10,123939;19.11.2020;30;Normalladeeinrichtung;2;AC Steckdose Typ 2, AC Schuko;22;;AC Steckdose Typ 2, AC Schuko;22;;;;;;;
 SWU Energie GmbH;Hausener Straße;13;;89129;Setzingen;Baden-Württemberg;Landkreis Alb-Donau-Kreis;48,538896;10,129616;18.05.2019;22;Normalladeeinrichtung;1;AC Steckdose Typ 2;22;;;;;;;;;;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 Hohenloher Berg Go-Kart und Berg Trampolin Großhandel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Württemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
-=======
-Betreiber;Straï¿½e;Hausnummer;Adresszusatz;Postleitzahl;Ort;Bundesland;Kreis/kreisfreie Stadt;Breitengrad;Lï¿½ngengrad;Inbetriebnahmedatum;Anschlussleistung;Art der Ladeeinrichung;Anzahl Ladepunkte;Steckertypen1;P1 [kW];Public Key1;Steckertypen2;P2 [kW];Public Key2;Steckertypen3;P3 [kW];Public Key3;Steckertypen4;P4 [kW];Public Key4
-Albwerk GmbH & Co. KG;Ennabeurer Weg;0;;72535;Heroldstatt;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,442398;9,659075;11.01.2020;22;Normalladeeinrichtung;2;AC Steckdose Typ 2;22;;AC Steckdose Typ 2;22;;;;;;;
-Albwerk GmbH & Co. KG;Parkplatz Campingplatz;0;;72589;Westerheim;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,5105;9,609;07.01.2019;22;Normalladeeinrichtung;2;AC Steckdose Typ 2;22;;AC Steckdose Typ 2;22;;;;;;;
-EnBW mobility+ AG und Co.KG ;Hauptstraï¿½e;91c;;73340;Amstetten;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,5785342;9,8748399;19.03.2019;98;Schnellladeeinrichtung;2;AC Kupplung Typ 2;43;;DC Kupplung Combo, DC CHAdeMO;50;;;;;;;
-EnBW mobility+ AG und Co.KG ;Karlstr.;45;;89129;Langenau;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,500374;10,117366;21.12.2018;30;Normalladeeinrichtung;2;AC Steckdose Typ 2, AC Schuko;22;;AC Steckdose Typ 2, AC Schuko;22;;;;;;;
-EnBW mobility+ AG und Co.KG ;Flurstï¿½ck;313;;89129;Langenau/Seligweiler;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,456817;10,029649;08.03.2019;300;Schnellladeeinrichtung;2;DC Kupplung Combo;300;;DC Kupplung Combo;300;;;;;;;
-EnBW mobility+ AG und Co.KG ;Flurstï¿½ck;313;;89129;Langenau/Seligweiler;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,456817;10,029649;08.03.2019;300;Schnellladeeinrichtung;2;DC Kupplung Combo;300;;DC Kupplung Combo;300;;;;;;;
-EnBW mobility+ AG und Co.KG ;Flurstï¿½ck;313;;89129;Langenau/Seligweiler;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,456817;10,029649;18.12.2019;173;Schnellladeeinrichtung;2;DC Kupplung Combo, DC CHAdeMO;150;;AC Steckdose Typ 2;22;;;;;;;
-EnBW mobility+ AG und Co.KG ;Parkplatz Burghof;0;;89129;Langenau;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,5000571;10,123939;19.11.2020;30;Normalladeeinrichtung;2;AC Steckdose Typ 2, AC Schuko;22;;AC Steckdose Typ 2, AC Schuko;22;;;;;;;
-SWU Energie GmbH;Hausener Straï¿½e;13;;89129;Setzingen;Baden-Wï¿½rttemberg;Landkreis Alb-Donau-Kreis;48,538896;10,129616;18.05.2019;22;Normalladeeinrichtung;1;AC Steckdose Typ 2;22;;;;;;;;;;
-Hohenloher Berg Go-Kart und Berg Trampolin Groï¿½handel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Wï¿½rttemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
->>>>>>> 6c21fc84e (Add charger test file)
-=======
-Hohenloher Berg Go-Kart und Berg Trampolin Großhandel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Württemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
->>>>>>> 99695d3a2 (DBScan neu implementiert (erfolgreich))
-=======
-Hohenloher Berg Go-Kart und Berg Trampolin Großhandel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Württemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
-Hohenloher Berg Go-Kart und Berg Trampolin Großhandel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Württemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
-Hohenloher Berg Go-Kart und Berg Trampolin Großhandel;Brunnenstrasse;12/2;;74635;Kupferzell-Goggenbach;Baden-Württemberg;Landkreis Hohenlohekreis;49,211944;9,732222;01.12.2020;22;Normalladeeinrichtung;2;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;"AC Steckdose Typ 2, AC Kupplung Typ 2, AC Schuko, AC CEE 3 polig; AC CEE 5 polig";22;;;;;;;
->>>>>>> origin/add_consumption

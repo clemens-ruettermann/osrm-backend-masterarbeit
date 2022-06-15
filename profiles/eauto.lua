@@ -29,99 +29,19 @@ function setup()
       traffic_light_penalty          = 2,
     },
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 8fe802ef5 (Car type added to lua; calculation of the elevation added; consumption calculation added; Started changing consumption value type to std::int32_t (not std::uint32_t))
-=======
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> origin/add_consumption
     car = {
         name                    = 'VW Id4',
         wltp                    = 18.3,
         base_weight             = 2124,
         passenger_weight        = 100,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> origin/add_consumption
         base_battery_capacity   = 77,
     	supported_plug_types	= {
 	    	'Typ 2',
 		    'AC Kupplung Typ 2',
 		    'AC Steckdose Typ 2'
 	    }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        base_battery_capacity   = 77
->>>>>>> 4812bc67a (Fix refactoring bug in eauto.lua; trying to find balance for creating the charger graph (currently it is nearly fully connected))
-=======
-        base_battery_capacity   = 77,
-<<<<<<< HEAD
-	supported_plug_types	= {
-		'Typ 2',
-		'AC Kupplung Typ 2',
-		'AC Steckdose Typ 2'
-	}
->>>>>>> 0b9991332 (Refactor extractor::Car to enav::Car; Broken many things :()
-=======
-    	supported_plug_types	= {
-	    	'Typ 2',
-		    'AC Kupplung Typ 2',
-		    'AC Steckdose Typ 2'
-	    }
->>>>>>> d0b247317 (Commit in order to work remote)
     },
 
-=======
->>>>>>> bd04ce58d (Started implementing charger filtering and consumption calculations)
-=======
-        base_battery_capacity   = 77
-=======
-        base_battery_capacity_milli_watt_h   = 77
->>>>>>> 53f8aac8c (WIP: Code zum erstellen des Charger Graphen hinzugefuegt; Interne ManyToMany Api nach aussen geoffnet)
-    },
-
->>>>>>> 8fe802ef5 (Car type added to lua; calculation of the elevation added; consumption calculation added; Started changing consumption value type to std::int32_t (not std::uint32_t))
-=======
-    },
-
->>>>>>> 1b41e999e (Implementing algorithms to perform routing for electric vehicles.)
-=======
-=======
->>>>>>> origin/add_consumption
-    },
-
-=======
->>>>>>> 00eba0c37 (Started Implementing)
-=======
->>>>>>> b4e728359 (Add nlohmann and fast-cpp-csv-parser to cmakelists + add masterarbeits files)
-<<<<<<< HEAD
->>>>>>> 18d37b1a2 (Implementing algorithms to perform routing for electric vehicles.)
-=======
->>>>>>> b4e728359 (Add nlohmann and fast-cpp-csv-parser to cmakelists + add masterarbeits files)
-=======
-=======
->>>>>>> origin/master
->>>>>>> origin/add_consumption
     default_mode              = mode.driving,
     default_speed             = 10,
     oneway_handling           = true,
