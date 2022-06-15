@@ -78,7 +78,7 @@ Status OSRM::Route(const RouteParameters &params, engine::api::ResultT &result) 
 	return engine_->Route(params, result);
 }
 
-std::vector<MyLegGeometry> OSRM::RouteInternal(const std::vector<util::Coordinate> &coords) const {
+std::vector<MyLegGeometry> OSRM::RouteInternal(const std::vector<util::Coordinate> & coords, const double wltp, const double car_weight) const {
 	std::vector<engine::guidance::LegGeometry> route_legs;
 	auto phantom_node_pairs = engine_->GetPhantomNodePairs(coords);
 	auto status = engine_->ViaRouteInternal(phantom_node_pairs, route_legs);
@@ -88,8 +88,13 @@ std::vector<MyLegGeometry> OSRM::RouteInternal(const std::vector<util::Coordinat
 			MyLegGeometry new_leg;
 
 			std::vector<MyLegGeometry::Annotation> annotations;
-			for (auto &an: leg.annotations) {
-				annotations.emplace_back(an.distance, an.duration, an.weight, an.consumption, an.datasource);
+			for (auto & an : leg.annotations) {
+				annotations.emplace_back(MyLegGeometry::Annotation{
+					an.distance,
+					an.duration,
+					an.weight,
+					(std::int32_t )std::lround(an.consumption_factor_pair.first * wltp + an.consumption_factor_pair.second*car_weight),
+					an.datasource});
 			}
 
 			new_leg.annotations = annotations;
@@ -162,6 +167,7 @@ Status OSRM::Tile(const engine::api::TileParameters &params, engine::api::Result
 	return engine_->Tile(params, result);
 }
 
+using RouteConsumption = std::int64_t;
 
 
 
@@ -169,8 +175,13 @@ Status OSRM::Tile(const engine::api::TileParameters &params, engine::api::Result
 // utils for charger routing
 
 
-static std::string routesToGeojson(const std::vector<osrm::engine::guidance::LegGeometry> &routes,
-                                   const double battery_capacity_in_milli_wh) {
+static std::string routesToGeojson(
+	const std::vector<osrm::engine::guidance::LegGeometry> &routes,
+	const double battery_capacity_in_milli_wh,
+	const double wltp,
+	const double car_weight
+) {
+
 	RouteConsumption complete_consumption = 0;
 	std::stringstream geojson_string_stream;
 	geojson_string_stream << R"({)";
@@ -203,8 +214,9 @@ static std::string routesToGeojson(const std::vector<osrm::engine::guidance::Leg
 			geojson_string_stream << R"(
 		"properties": {
 			"consumption": )";
-			battery_cap -= route.annotations[j].consumption;
-			complete_consumption += route.annotations[j].consumption;
+			auto tmp_consumption = route.annotations[j].consumption_factor_pair.first * wltp + route.annotations[j].consumption_factor_pair.second * car_weight;
+			battery_cap -= tmp_consumption;
+			complete_consumption += tmp_consumption;
 			auto percentage = ((double) battery_cap / battery_capacity_in_milli_wh) * 100.0;
 			geojson_string_stream << std::to_string(percentage);
 			geojson_string_stream << R"(
@@ -228,7 +240,9 @@ static void route_result_to_custom_json(
 		std::uint32_t base_battery_capacity,
 		std::vector<engine::guidance::LegGeometry> &route_legs,
 		std::vector<std::uint32_t> &max_power_of_used_chargers,
-		std::vector<util::Coordinate> &points) {
+		std::vector<util::Coordinate> &points,
+		const double wltp,
+		const double car_weight) {
 
 	auto waypoints = util::json::Array();
 
@@ -263,9 +277,11 @@ static void route_result_to_custom_json(
 			}
 
 			duration += it.annotations[j].duration;
-			battery_capacity -= it.annotations[j].consumption;
+			auto current_consumption = it.annotations[j].consumption_factor_pair.first * wltp + it.annotations[j].consumption_factor_pair.second * car_weight;
+			battery_capacity -= current_consumption;
 			weight += it.annotations[j].weight;
-			consumption += it.annotations[j].consumption;
+			consumption += current_consumption;
+
 
 			auto new_waypoint = util::json::Object();
 			new_waypoint.values["lon"] = (double) toFloating(tmp_lon);
@@ -305,7 +321,7 @@ static void route_result_to_custom_json(
 		stop_points.values.emplace_back(new_point);
 	}
 	result.values["points"] = stop_points;
-	result.values["geojson"] = routesToGeojson(route_legs, base_battery_capacity);
+	result.values["geojson"] = routesToGeojson(route_legs, base_battery_capacity, wltp, car_weight);
 }
 
 
@@ -314,7 +330,9 @@ enav::ReachableChargers OSRM::getReachableChargers(
 		const engine::PhantomNodePair &phantom_node_end,
 		const std::vector<enav::Charger> &chargers,
 		const double lower_capacity_limit,
-		const double upper_capacity_limit) const {
+		const double upper_capacity_limit,
+		const double wltp,
+		const double car_weight) const {
 	std::vector<enav::ReachableStartNode> from_start_reachable_chargers;
 	std::vector<enav::ReachableEndNode> to_end_reachable_chargers;
 	std::vector<engine::PhantomNodePair> all_nodes;
@@ -331,11 +349,12 @@ enav::ReachableChargers OSRM::getReachableChargers(
 		TIMER_STOP(TMP_START);
 		util::Log(logDEBUG) << "Calculating from start reachable chargers took " << TIMER_SEC(TMP_START) << "s";
 
-		auto consumptions = std::get<2>(result);
+		auto consumption_factors = std::get<2>(result);
 		auto weights = std::get<3>(result);
 		for (size_t i = 0; i < all_nodes.size() - 1; i++) {
-			if (lower_capacity_limit <= consumptions[i] && upper_capacity_limit >= consumptions[i]) {
-				from_start_reachable_chargers.emplace_back(chargers[i], consumptions[i], weights[i]);
+			auto tmp_consumption = consumption_factors[i].first * wltp + consumption_factors[i].second * car_weight;
+			if (upper_capacity_limit >= tmp_consumption && lower_capacity_limit <= tmp_consumption) {
+				from_start_reachable_chargers.emplace_back(chargers[i], consumption_factors[i].first, consumption_factors[i].second, weights[i], wltp, car_weight);
 			}
 		}
 		if (from_start_reachable_chargers.empty()) {
@@ -354,11 +373,12 @@ enav::ReachableChargers OSRM::getReachableChargers(
 		TIMER_STOP(TMP_END);
 		util::Log(logDEBUG) << "Calculating to end reachable chargers took " << TIMER_SEC(TMP_END) << "s";
 
-		auto consumptions = std::get<2>(result);
+		auto consumption_factors = std::get<2>(result);
 		auto weights = std::get<3>(result);
 		for (size_t i = 0; i < all_nodes.size() - 1; i++) {
-			if (lower_capacity_limit <= consumptions[i] && upper_capacity_limit >= consumptions[i]) {
-				to_end_reachable_chargers.emplace_back(chargers[i].node_id, consumptions[i], weights[i]);
+			auto tmp_consumption = consumption_factors[i].first * wltp + consumption_factors[i].second * car_weight;
+			if (upper_capacity_limit >= tmp_consumption && lower_capacity_limit <= tmp_consumption) {
+				to_end_reachable_chargers.emplace_back(chargers[i].node_id, consumption_factors[i].first, consumption_factors[i].second, weights[i]);
 			}
 		}
 		if (to_end_reachable_chargers.empty()) {
@@ -372,10 +392,11 @@ enav::ReachableChargers OSRM::getReachableChargers(
 }
 
 
-static RouteConsumption consumptionOfLeg(const engine::guidance::LegGeometry &leg) {
+
+static RouteConsumption consumptionOfLeg(const engine::guidance::LegGeometry &leg, const double wltp, const double car_weight) {
 	RouteConsumption ret = 0;
 	for (const auto &annotation: leg.annotations) {
-		ret += annotation.consumption;
+		ret += annotation.consumption_factor_pair.first * wltp + annotation.consumption_factor_pair.second * car_weight;
 	}
 	return ret;
 }
@@ -394,12 +415,14 @@ static std::vector<util::Coordinate> getSearchPointsForLegAndLimit(
 		const engine::guidance::LegGeometry &leg_geometry,
 		const std::uint32_t lower_capacity_limit,
 		const std::uint32_t upper_capacity_limit,
-		const double search_radius) {
+		const double search_radius,
+		const double wltp,
+		const double car_weight) {
 
 	std::vector<util::Coordinate> search_points;
 	RouteConsumption tmp_consumption = 0;
 	for (size_t i = 0; i < leg_geometry.annotations.size(); i++) {
-		tmp_consumption += leg_geometry.annotations[i].consumption;
+		tmp_consumption += leg_geometry.annotations[i].consumption_factor_pair.first * wltp + leg_geometry.annotations[i].consumption_factor_pair.second * car_weight;
 		if (tmp_consumption < lower_capacity_limit) {
 			continue;
 		}
@@ -426,10 +449,9 @@ static std::vector<util::Coordinate> getSearchPointsForLegAndLimit(
 static std::vector<enav::Charger>
 getPossibleChargers(engine::guidance::LegGeometry &leg_geometry, std::vector<enav::Charger> &charger_list,
                     const uint32_t lower_capacity_limit, const uint32_t upper_capacity_limit,
-                    const double search_radius, std::vector<ChargerId> used_charger_ids) {
+                    const double search_radius, std::vector<ChargerId> used_charger_ids, const double wltp, const double car_weight) {
 	std::vector<enav::Charger> possible_chargers;
-	auto search_points = getSearchPointsForLegAndLimit(leg_geometry, lower_capacity_limit, upper_capacity_limit,
-	                                                   search_radius);
+	auto search_points = getSearchPointsForLegAndLimit(leg_geometry, lower_capacity_limit, upper_capacity_limit, search_radius, wltp, car_weight);
 	util::Log(logDEBUG) << "Found " << search_points.size() << " points to search for chargers";
 
 	auto charger_within_searchradius_of_points = [&search_points, &search_radius, &used_charger_ids](
@@ -485,10 +507,8 @@ getPossibleChargers(engine::guidance::LegGeometry &leg_geometry, std::vector<ena
 Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Object &result) const {
 	auto battery_capacity = osrm::enav::temperature_dependent_capacity(charger_graph_->car->base_battery_capacity_milli_watt_h, parameters.temperature);
 
-	auto lower_capacity_limit =
-			parameters.lower_capacity_limit_percent * battery_capacity / 100.0;
-	auto upper_capacity_limit =
-			parameters.upper_capacity_limit_percent * battery_capacity / 100.0;
+	auto lower_capacity_limit = parameters.lower_capacity_limit;
+	auto upper_capacity_limit = parameters.upper_capacity_limit;
 
 	auto phantom_node_pair_start = engine_->GetPhantomNodePair(parameters.start);
 	auto phantom_node_pair_end = engine_->GetPhantomNodePair(parameters.end);
@@ -501,8 +521,15 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 		return Status::Error;
 	}
 
-	if (first_route_result.size() == 1 && consumptionOfLeg(first_route_result[0]) <= upper_capacity_limit) {
-		return pointsToFinalRoute(parameters.output_format, phantom_node_pair_start, phantom_node_pair_end, {}, battery_capacity, result);
+	if (first_route_result.size() == 1 && consumptionOfLeg(first_route_result[0], parameters.wltp, parameters.weight) <= upper_capacity_limit) {
+		return pointsToFinalRoute(
+			parameters.output_format,
+			phantom_node_pair_start,
+			phantom_node_pair_end,
+			{},
+			battery_capacity,
+			parameters.wltp, parameters.weight,
+			result);
 	}
 
 	TIMER_START(FILTER_CHARGERS);
@@ -511,7 +538,9 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 	                                                                   0,
 	                                                                   std::numeric_limits<std::int32_t>::max(),
 	                                                                   parameters.search_radius,
-	                                                                   {});
+	                                                                   {},
+																	   parameters.wltp,
+																	   parameters.weight);
 
 
 //	{
@@ -544,14 +573,15 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 				std::execution::par_unseq,
 				possible_charger_ids.cbegin(),
 				possible_charger_ids.cend(),
-				[&mutex_, &edges, &edges_end, &possible_charger_ids, &lower_capacity_limit, &upper_capacity_limit, this](
+				[&mutex_, &edges, &edges_end, &possible_charger_ids, &lower_capacity_limit, &upper_capacity_limit, &parameters, this](
 						const ChargerId &id) {
 					auto start_it = charger_graph_->edge_begin_index_map.at(id);
 					for (auto it = start_it; it != edges_end && it->start == id; it++) {
 						for (auto &possible_end_charger_id: possible_charger_ids) {
-							if (it->end == possible_end_charger_id && it->consumption >= lower_capacity_limit && it->consumption <= upper_capacity_limit) {
+							auto tmp_consumption = it->driving_factor * parameters.wltp + it->resistance_factor * parameters.weight;
+							if (it->end == possible_end_charger_id && tmp_consumption >= lower_capacity_limit && tmp_consumption <= upper_capacity_limit) {
 								std::lock_guard<std::mutex> lg{mutex_};
-								edges->emplace_back(it->start, it->end, it->weight, it->consumption);
+								edges->emplace_back(it->start, it->end, it->weight, it->driving_factor, it->resistance_factor);
 								break;
 							}
 						}
@@ -585,7 +615,9 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 			phantom_node_pair_end,
 			tmp_charger_graph->charger_list,
 			lower_capacity_limit,
-			upper_capacity_limit);
+			upper_capacity_limit,
+			parameters.wltp,
+			parameters.weight);
 	if (reachable_chargers.to_end_reachable_chargers.empty() ||
 	    reachable_chargers.from_start_reachable_chargers.empty()) {
 		return Status::Error;
@@ -609,8 +641,11 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 
 
 	TIMER_START(ROUTE);
-	auto charger_graph_result = tmp_charger_graph->shortestPath(reachable_chargers.from_start_reachable_chargers,
-																reachable_chargers.to_end_reachable_chargers);
+	auto charger_graph_result = tmp_charger_graph->shortestPath(
+		reachable_chargers.from_start_reachable_chargers,
+		reachable_chargers.to_end_reachable_chargers,
+		parameters.wltp,
+		parameters.weight);
 	std::vector<ChargerId> used_charger_ids;
 	std::transform(
 			charger_graph_result.ids_of_path.cbegin(),
@@ -635,7 +670,15 @@ Status OSRM::EVRouteDijkstraAlongRoute(EVRouteParameters &parameters, json::Obje
 	}
 
 
-	return pointsToFinalRoute(parameters.output_format, phantom_node_pair_start, phantom_node_pair_end, used_charger_ids, battery_capacity, result);
+	return pointsToFinalRoute(
+		parameters.output_format,
+		phantom_node_pair_start,
+		phantom_node_pair_end,
+		used_charger_ids,
+		battery_capacity,
+		parameters.wltp,
+		parameters.weight,
+		result);
 }
 
 
@@ -646,8 +689,8 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 
 	auto battery_capacity = osrm::enav::temperature_dependent_capacity(charger_graph_->car->base_battery_capacity_milli_watt_h, parameters.temperature);
 
-	std::uint32_t lower_capacity_limit = std::lround(parameters.lower_capacity_limit_percent * battery_capacity / 100.0);
-	std::uint32_t upper_capacity_limit = std::lround(parameters.upper_capacity_limit_percent * battery_capacity / 100.0);
+	std::uint32_t lower_capacity_limit = std::lround(parameters.lower_capacity_limit);
+	std::uint32_t upper_capacity_limit = std::lround(parameters.upper_capacity_limit);
 
 	auto phantom_node_pair_start = engine_->GetPhantomNodePair(parameters.start);
 	auto phantom_node_pair_end = engine_->GetPhantomNodePair(parameters.end);
@@ -657,7 +700,7 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 
 	RouteConsumption last_route_consumption;
 	std::vector<engine::guidance::LegGeometry> tmp_result;
-	auto status = this->engine_->ViaRouteInternal(phantom_nodes, tmp_result, last_route_consumption);
+	auto status = this->engine_->ViaRouteInternal(phantom_nodes, tmp_result, last_route_consumption, parameters.wltp, parameters.weight);
 	util::Log(logDEBUG) << "Consumption for direct route is " << last_route_consumption;
 	if (status == Status::Error) {
 		result = util::json::Object();
@@ -673,7 +716,7 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 	while (last_route_consumption > upper_capacity_limit) {
 		prev_prev_consumption = last_route_consumption;
 		auto current_leg = tmp_result[tmp_result.size() - 1];
-		if (consumptionOfLeg(current_leg) < upper_capacity_limit) {
+		if (consumptionOfLeg(current_leg, parameters.wltp, parameters.weight) < upper_capacity_limit) {
 			break;
 		}
 
@@ -684,7 +727,9 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 				lower_capacity_limit,
 				upper_capacity_limit,
 				parameters.search_radius,
-				used_charger_ids);
+				used_charger_ids,
+				parameters.wltp,
+				parameters.weight);
 
 
 		bool found_valid_next_charger = false;
@@ -711,7 +756,7 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 
 
 			BOOST_ASSERT(dummy_result.size() == 1);
-			RouteConsumption tmp_consumption = consumptionOfLeg(dummy_result[0]);
+			RouteConsumption tmp_consumption = consumptionOfLeg(dummy_result[0], parameters.wltp, parameters.weight);
 
 			if (tmp_consumption <= upper_capacity_limit && tmp_consumption >= lower_capacity_limit) {
 				found_valid_next_charger = true;
@@ -730,7 +775,7 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 		used_charger_ids.emplace_back(next_charger.node_id);
 
 		tmp_result.clear();
-		this->engine_->ViaRouteInternal(phantom_nodes, tmp_result, last_route_consumption);
+		this->engine_->ViaRouteInternal(phantom_nodes, tmp_result, last_route_consumption, parameters.wltp, parameters.weight);
 		if (prev_prev_consumption == last_route_consumption) {
 			util::Log(logERROR) << "Twice in row the same consumption. This is very likely an error";
 			std::ofstream out{"/tmp/test/invalid_along_routes" + util::uuid::generate_uuid_v4() + ".txt", std::ios_base::app};
@@ -743,7 +788,15 @@ Status OSRM::EVRouteAlongRoute(EVRouteParameters &parameters, json::Object &resu
 		return engine::Status::Error;
 	}
 
-	return pointsToFinalRoute(parameters.output_format, phantom_node_pair_start, phantom_node_pair_end, used_charger_ids, battery_capacity, result);
+	return pointsToFinalRoute(
+		parameters.output_format,
+		phantom_node_pair_start,
+		phantom_node_pair_end,
+		used_charger_ids,
+		battery_capacity,
+		parameters.wltp,
+		parameters.weight,
+		result);
 }
 
 
@@ -753,10 +806,8 @@ Status OSRM::EVRouteDijkstra(EVRouteParameters &parameters, json::Object &result
 
 	auto battery_capacity = osrm::enav::temperature_dependent_capacity(charger_graph_->car->base_battery_capacity_milli_watt_h, parameters.temperature);
 
-	auto lower_capacity_limit =
-			parameters.lower_capacity_limit_percent * battery_capacity / 100.0;
-	auto upper_capacity_limit =
-			parameters.upper_capacity_limit_percent * battery_capacity / 100.0;
+	auto lower_capacity_limit = parameters.lower_capacity_limit;
+	auto upper_capacity_limit = parameters.upper_capacity_limit;
 
 	util::Log(logDEBUG) << "Calculating reachable chargers ...";
 	auto reachable_chargers = getReachableChargers(
@@ -764,7 +815,9 @@ Status OSRM::EVRouteDijkstra(EVRouteParameters &parameters, json::Object &result
 			phantom_node_pair_end,
 			charger_graph_->charger_list,
 			lower_capacity_limit,
-			upper_capacity_limit);
+			upper_capacity_limit,
+			parameters.wltp,
+			parameters.weight);
 	util::Log(logDEBUG) << "There are " << reachable_chargers.from_start_reachable_chargers.size()
 	                    << " from start reachable chargers";
 	util::Log(logDEBUG) << "There are " << reachable_chargers.to_end_reachable_chargers.size()
@@ -779,8 +832,11 @@ Status OSRM::EVRouteDijkstra(EVRouteParameters &parameters, json::Object &result
 	}
 	util::Log(logDEBUG) << "Got reachable charger. Now starting Dijkstra ...";
 	TIMER_START(ROUTE);
-	auto charger_graph_result = this->charger_graph_->shortestPath(reachable_chargers.from_start_reachable_chargers,
-	                                                               reachable_chargers.to_end_reachable_chargers);
+	auto charger_graph_result = this->charger_graph_->shortestPath(
+		reachable_chargers.from_start_reachable_chargers,
+		reachable_chargers.to_end_reachable_chargers,
+		parameters.wltp,
+		parameters.weight);
 	if (!charger_graph_result.found_route) {
 		return Status::Error;
 	}
@@ -790,16 +846,25 @@ Status OSRM::EVRouteDijkstra(EVRouteParameters &parameters, json::Object &result
 	util::Log(logDEBUG) << "calculating the shortest charger route took " << TIMER_SEC(ROUTE) << " seconds"
 	                    << std::endl;
 
-	return pointsToFinalRoute(parameters.output_format, phantom_node_pair_start, phantom_node_pair_end,
-	                          charger_graph_result.ids_of_path, battery_capacity, result);
+	return pointsToFinalRoute(
+		parameters.output_format,
+		phantom_node_pair_start,
+		phantom_node_pair_end,
+		charger_graph_result.ids_of_path,
+		battery_capacity,
+		parameters.wltp,
+		parameters.weight,
+		result);
 }
 
 
 const Status OSRM::pointsToFinalRoute(const EVRouteParameters::OutputFormat output_format,
                                       const engine::PhantomNodePair start,
                                       const engine::PhantomNodePair end,
-                                      const std::vector<ChargerId> used_charger_ids,
+                                      const std::vector<ChargerId> & used_charger_ids,
 									  const std::uint32_t battery_capacity,
+									  const double wltp,
+									  const double car_weight,
                                       json::Object &result) const {
 
 	std::vector<engine::PhantomNodePair> phantom_node_pairs;
@@ -837,7 +902,7 @@ const Status OSRM::pointsToFinalRoute(const EVRouteParameters::OutputFormat outp
 		std::vector<util::Coordinate> coords;
 		std::transform(snapped_phantom_nodes.begin(), snapped_phantom_nodes.end(), std::back_inserter(coords),
 		               [](const auto &it) { return it.location; });
-		route_result_to_custom_json(result, battery_capacity, route_legs, max_power_of_used_chargers, coords);
+		route_result_to_custom_json(result, battery_capacity, route_legs, max_power_of_used_chargers, coords, wltp, car_weight);
 
 	} else if (output_format == engine::api::EVRouteParameters::OutputFormat::OSRM) {
 		status = this->engine_->ViaRouteInternal(phantom_node_pairs, result);

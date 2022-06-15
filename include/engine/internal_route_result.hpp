@@ -45,7 +45,9 @@ struct PathData
     // will contain the duration of the turn.  Otherwise it will be 0.
     EdgeWeight duration_of_turn;
 	// consumption that is traveled on the segment until the turn is reached
-	EdgeConsumption consumption_until_turn;
+	EdgeDrivingFactor driving_factor_until_turn;
+	EdgeResistanceFactor resistance_factor_until_turn;
+
 
     // instruction to execute at the turn
     osrm::guidance::TurnInstruction turn_instruction;
@@ -157,11 +159,13 @@ inline InternalRouteResult CollapseInternalRouteResult(const InternalRouteResult
 	            if (leggy_result.source_traversed_in_reverse[i]) {
 					last_segment[old_size].weight_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_weight;
 		            last_segment[old_size].duration_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_duration;
-					last_segment[old_size].consumption_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_consumption;
+					last_segment[old_size].driving_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_driving_factor;
+					last_segment[old_size].resistance_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.reverse_resistance_factor;
 				} else {
 		            last_segment[old_size].weight_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_weight;
 		            last_segment[old_size].duration_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_duration;
-		            last_segment[old_size].consumption_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_consumption;
+		            last_segment[old_size].driving_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_driving_factor;
+		            last_segment[old_size].resistance_factor_until_turn += leggy_result.segment_end_coordinates[i].source_phantom.forward_resistance_factor;
 				}
             }
         }

@@ -13,22 +13,25 @@ namespace enav {
 
 struct ReachableStartNode {
 	NodeID id;
-	EdgeConsumption consumption_to_reach_node;
+	EdgeDrivingFactor driving_factor_to_reach_node;
+	EdgeResistanceFactor resistance_factor_to_reach_node;
 	EdgeWeight weight_to_reach_node;
 
 public:
-	ReachableStartNode(const Charger & charger, EdgeConsumption consumption, EdgeWeight weight) :
-		id(charger.node_id), consumption_to_reach_node(consumption), weight_to_reach_node(weight + calculate_charging_time(consumption, charger.max_power)) {}
-		ReachableStartNode(const NodeID id, EdgeConsumption consumption_to_reach_node, EdgeWeight weight_to_reach_node) : id(id), consumption_to_reach_node(consumption_to_reach_node), weight_to_reach_node(weight_to_reach_node) {}
+	ReachableStartNode(const Charger & charger, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor, EdgeWeight weight, double wltp, double car_weight) :
+		id(charger.node_id), driving_factor_to_reach_node(driving_factor), resistance_factor_to_reach_node(resistance_factor), weight_to_reach_node(weight + calculate_charging_time(driving_factor, resistance_factor, charger.max_power, wltp, car_weight)) {}
+		ReachableStartNode(const NodeID id, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor, EdgeWeight weight_to_reach_node) : id(id), driving_factor_to_reach_node(driving_factor), resistance_factor_to_reach_node(resistance_factor), weight_to_reach_node(weight_to_reach_node) {}
 };
 
 
 struct ReachableEndNode {
 	NodeID id;
-	EdgeConsumption consumption_to_end;
+	EdgeDrivingFactor driving_factor_to_end;
+	EdgeResistanceFactor resistance_factor_to_end;
 	EdgeWeight weight_to_end;
 public:
-	ReachableEndNode(const NodeID nodeId, EdgeConsumption consumption, EdgeWeight weight) : id(nodeId), consumption_to_end(consumption), weight_to_end(weight) {}
+	ReachableEndNode(const NodeID nodeId, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor, EdgeWeight weight)
+		: id(nodeId), driving_factor_to_end(driving_factor), resistance_factor_to_end(resistance_factor), weight_to_end(weight) {}
 };
 
 

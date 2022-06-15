@@ -23,12 +23,17 @@ Route assembleRoute(const std::vector<RouteLeg> &route_legs)
         route_legs.begin(), route_legs.end(), 0., [](const double sum, const RouteLeg &leg) {
             return sum + leg.weight;
         });
-	auto consumption = std::accumulate(
+	double driving_factor = std::accumulate(
 			route_legs.begin(), route_legs.end(), 0, [] (const double sum, const RouteLeg &leg) {
-				return sum + leg.consumption;
+				return sum + leg.driving_factor;
 			});
 
-    return Route{distance, duration, consumption, weight};
+	double resistance_factor = std::accumulate(
+			route_legs.begin(), route_legs.end(), 0, [] (const double sum, const RouteLeg &leg) {
+				return sum + leg.resistance_factor;
+			});
+
+    return Route{distance, duration, driving_factor, resistance_factor, weight};
 }
 
 } // namespace guidance

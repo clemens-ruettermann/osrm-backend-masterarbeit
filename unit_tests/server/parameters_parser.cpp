@@ -814,4 +814,58 @@ BOOST_AUTO_TEST_CASE(valid_trip_urls)
     BOOST_CHECK_EQUAL(param_fail_2, 33UL);
 }
 
+
+
+
+BOOST_AUTO_TEST_CASE(valid_ev_urls)
+{
+	util::Coordinate start = {util::FloatLongitude{1}, util::FloatLatitude{2}};
+	util::Coordinate end = {util::FloatLongitude{3}, util::FloatLatitude{4}};
+
+	EVRouteParameters reference_1{};
+	reference_1.start = start;
+	reference_1.end = end;
+	auto result_1 = parseParameters<EVRouteParameters>("1,2;3,4");
+	BOOST_CHECK(result_1);
+	BOOST_CHECK(!result_1->IsValid());
+	BOOST_CHECK_EQUAL(reference_1.search_radius, result_1->search_radius);
+	BOOST_CHECK_EQUAL(reference_1.upper_capacity_limit, result_1->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_1.lower_capacity_limit, result_1->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_1.start, result_1->start);
+	BOOST_CHECK_EQUAL(reference_1.end, result_1->end);
+
+	EVRouteParameters reference_2{};
+	reference_2.start = start;
+	reference_2.end = end;
+	reference_2.search_radius = 1234;
+	auto result_2 = parseParameters<EVRouteParameters>("1,2;3,4?search_radius=1234");
+	BOOST_CHECK(result_2);
+	BOOST_CHECK(!result_2->IsValid());
+	BOOST_CHECK_EQUAL(reference_2.search_radius, result_2->search_radius);
+	BOOST_CHECK_EQUAL(reference_2.upper_capacity_limit, result_2->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_2.lower_capacity_limit, result_2->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_2.start, result_2->start);
+	BOOST_CHECK_EQUAL(reference_2.end, result_2->end);
+
+
+	EVRouteParameters reference_3{};
+	reference_3.start = start;
+	reference_3.end = end;
+	reference_3.search_radius = 1234;
+	reference_3.wltp = 18.3;
+	reference_3.weight = 2345;
+	reference_3.battery_capacity = 77;
+	reference_3.upper_capacity_limit = std::lround(reference_3.battery_capacity * 0.75 * 1000000);
+	reference_3.lower_capacity_limit = std::lround(reference_3.battery_capacity * 0.5 * 1000000);
+
+	auto result_3 = parseParameters<EVRouteParameters>("1,2;3,4?search_radius=1234&battery_capacity=77&lower_capacity_limit=50&upper_capacity_limit=75&wltp=18.3&weight=2345");
+	BOOST_CHECK(result_3);
+	BOOST_CHECK(result_3->IsValid());
+	BOOST_CHECK_EQUAL(reference_3.search_radius, result_3->search_radius);
+	BOOST_CHECK_EQUAL(reference_3.upper_capacity_limit, result_3->upper_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_3.lower_capacity_limit, result_3->lower_capacity_limit);
+	BOOST_CHECK_EQUAL(reference_3.start, result_3->start);
+	BOOST_CHECK_EQUAL(reference_3.end, result_3->end);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

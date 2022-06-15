@@ -21,7 +21,8 @@ template <storage::Ownership Ownership> struct CellMetricImpl
     Vector<EdgeWeight> weights;
     Vector<EdgeDuration> durations;
     Vector<EdgeDistance> distances;
-    Vector<EdgeConsumption> consumptions;
+    Vector<EdgeDrivingFactor> driving_factors;
+    Vector<EdgeResistanceFactor> resistance_factors;
 };
 } // namespace detail
 

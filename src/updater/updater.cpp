@@ -116,10 +116,16 @@ void checkWeightsConsistency(
                 util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << weight << " > " << edge.data.weight;
             }
 
-	        auto consumption_range = segment_data.GetForwardConsumptions(geometry_id.id);
-	        EdgeConsumption consumption = std::accumulate(consumption_range.begin(), consumption_range.end(), EdgeConsumption{0});
-	        if (consumption > edge.data.consumption) {
-		        util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << consumption << " > " << edge.data.consumption;
+	        auto driving_factor_range = segment_data.GetForwardDrivingFactors(geometry_id.id);
+	        EdgeDrivingFactor driving_factor = std::accumulate(driving_factor_range.begin(), driving_factor_range.end(), EdgeDrivingFactor {0});
+	        if (driving_factor > edge.data.driving_factor) {
+		        util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << driving_factor << " > " << edge.data.driving_factor;
+	        }
+
+	        auto resistance_factor_range = segment_data.GetForwardResistanceFactors(geometry_id.id);
+	        EdgeResistanceFactor resistance_factor = std::accumulate(resistance_factor_range.begin(), resistance_factor_range.end(), EdgeResistanceFactor {0});
+	        if (resistance_factor > edge.data.resistance_factor) {
+		        util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << resistance_factor << " > " << edge.data.resistance_factor;
 	        }
         } else {
             auto range = segment_data.GetReverseWeights(geometry_id.id);
@@ -128,11 +134,18 @@ void checkWeightsConsistency(
                 util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << weight << " > " << edge.data.weight;
             }
 
-			auto consumption_range = segment_data.GetReverseConsumptions(geometry_id.id);
-			EdgeConsumption consumption = std::accumulate(consumption_range.begin(), consumption_range.end(), EdgeConsumption{0});
-			if (consumption > edge.data.consumption) {
-				util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << consumption << " > " << edge.data.consumption;
-			}
+
+	        auto driving_factor_range = segment_data.GetReverseDrivingFactors(geometry_id.id);
+	        EdgeDrivingFactor driving_factor = std::accumulate(driving_factor_range.begin(), driving_factor_range.end(), EdgeDrivingFactor {0});
+	        if (driving_factor > edge.data.driving_factor) {
+		        util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << driving_factor << " > " << edge.data.driving_factor;
+	        }
+
+	        auto resistance_factor_range = segment_data.GetReverseResistanceFactors(geometry_id.id);
+	        EdgeDrivingFactor resistance_factor = std::accumulate(resistance_factor_range.begin(), resistance_factor_range.end(), EdgeResistanceFactor {0});
+	        if (resistance_factor > edge.data.resistance_factor) {
+		        util::Log(logWARNING) << geometry_id.id << " vs " << edge.data.turn_id << ":" << resistance_factor << " > " << edge.data.resistance_factor;
+	        }
         }
     }
 }
@@ -527,17 +540,19 @@ updateConditionalTurns(std::vector<TurnPenalty> &turn_weight_penalties,
 
 EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedEdge> &edge_based_edge_list,
                                         std::vector<EdgeWeight> &node_weights,
+                                               std::vector<EdgeDrivingFactor> &node_driving_factors,
+                                               std::vector<EdgeResistanceFactor> &node_resistance_factors,
                                         std::uint32_t &connectivity_checksum) const
 {
     std::vector<EdgeDuration> node_durations(node_weights.size());
-    std::vector<EdgeConsumption> node_consumptions(node_weights.size());
-    return LoadAndUpdateEdgeExpandedGraph(edge_based_edge_list, node_weights, node_durations, node_consumptions, connectivity_checksum);
+    return LoadAndUpdateEdgeExpandedGraph(edge_based_edge_list, node_weights, node_durations, node_driving_factors, node_resistance_factors, connectivity_checksum);
 }
 
 EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedEdge> &edge_based_edge_list,
                                         std::vector<EdgeWeight> &node_weights,
                                         std::vector<EdgeDuration> &node_durations,
-                                        std::vector<EdgeConsumption> &node_consumptions,
+										std::vector<EdgeDrivingFactor> &node_driving_factors,
+										std::vector<EdgeResistanceFactor> &node_resistance_factors,
                                         std::uint32_t &connectivity_checksum) const
 {
     TIMER_START(load_edges);
@@ -547,7 +562,7 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
     extractor::PackedOSMIDs osm_node_ids;
 
 	extractor::files::readEdgeBasedNodeWeightsDurationsConsumptions(
-			config.GetPath(".osrm.enw"), node_weights, node_durations, node_consumptions);
+			config.GetPath(".osrm.enw"), node_weights, node_durations, node_driving_factors, node_resistance_factors);
 
     extractor::files::readEdgeBasedGraph(config.GetPath(".osrm.ebg"),
                                          number_of_edge_based_nodes,
@@ -671,12 +686,13 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
                        });
 
 
-    using WeightAndDurationAndConsumption = std::tuple<EdgeWeight, EdgeWeight, EdgeConsumption>;
+    using WeightAndDurationAndConsumption = std::tuple<EdgeWeight, EdgeWeight, EdgeDrivingFactor, EdgeResistanceFactor>;
     const auto compute_new_weight_and_duration_and_consumption =
         [&](const GeometryID geometry_id) -> WeightAndDurationAndConsumption {
         EdgeWeight new_weight = 0;
         EdgeWeight new_duration = 0;
-		EdgeConsumption new_consumption = 0;
+		EdgeDrivingFactor new_driving_factor = 0;
+		EdgeResistanceFactor new_resistance_factor = 0;
         if (geometry_id.forward)
         {
             const auto weights = segment_data.GetForwardWeights(geometry_id.id);
@@ -692,8 +708,10 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
             const auto durations = segment_data.GetForwardDurations(geometry_id.id);
             new_duration = std::accumulate(durations.begin(), durations.end(), EdgeWeight{0});
 
-			const auto consumptions = segment_data.GetForwardConsumptions(geometry_id.id);
-			new_consumption = std::accumulate(consumptions.begin(), consumptions.end(), EdgeConsumption{0});
+			const auto driving_factors = segment_data.GetForwardDrivingFactors(geometry_id.id);
+	        new_driving_factor = std::accumulate(driving_factors.begin(), driving_factors.end(), EdgeDrivingFactor{0});
+	        const auto resistance_factors = segment_data.GetForwardResistanceFactors(geometry_id.id);
+	        new_resistance_factor = std::accumulate(resistance_factors.begin(), resistance_factors.end(), EdgeResistanceFactor{0});
         }
         else
         {
@@ -710,10 +728,13 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
             const auto durations = segment_data.GetReverseDurations(geometry_id.id);
             new_duration = std::accumulate(durations.begin(), durations.end(), EdgeWeight{0});
 
-	        const auto consumptions = segment_data.GetReverseConsumptions(geometry_id.id);
-	        new_consumption = std::accumulate(consumptions.begin(), consumptions.end(), EdgeConsumption{0});
+	        const auto driving_factors = segment_data.GetReverseDrivingFactors(geometry_id.id);
+	        new_driving_factor = std::accumulate(driving_factors.begin(), driving_factors.end(), EdgeDrivingFactor {0});
+
+	        const auto resistance_factors = segment_data.GetReverseResistanceFactors(geometry_id.id);
+	        new_resistance_factor = std::accumulate(resistance_factors.begin(), resistance_factors.end(), EdgeResistanceFactor{0});
         }
-        return std::make_tuple(new_weight, new_duration, new_consumption);
+        return std::make_tuple(new_weight, new_duration, new_driving_factor, new_resistance_factor);
     };
 
     std::vector<WeightAndDurationAndConsumption> accumulated_segment_data(updated_segments.size());
@@ -739,8 +760,9 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
             // weight
             EdgeWeight new_weight;
             EdgeWeight new_duration;
-			EdgeConsumption new_consumption;
-            std::tie(new_weight, new_duration, new_consumption) = accumulated_segment_data[updated_iter - updated_segments.begin()];
+			EdgeDrivingFactor new_driving_factor;
+			EdgeResistanceFactor new_resistance_factor;
+            std::tie(new_weight, new_duration, new_driving_factor, new_resistance_factor) = accumulated_segment_data[updated_iter - updated_segments.begin()];
 
             // Update the node-weight cache. This is the weight of the edge-based-node
             // only, it doesn't include the turn. We may visit the same node multiple times,
@@ -752,7 +774,8 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
 				node_weights[edge.source] = new_weight;
 			}
             node_durations[edge.source] = new_duration;
-			node_consumptions[edge.source] = new_consumption;
+			node_driving_factors[edge.source] = new_driving_factor;
+			node_resistance_factors[edge.source] = new_resistance_factor;
 
             // We found a zero-speed edge, so we'll skip this whole edge-based-edge
             // which
@@ -787,7 +810,8 @@ EdgeID Updater::LoadAndUpdateEdgeExpandedGraph(std::vector<extractor::EdgeBasedE
             // Update edge weight
             edge.data.weight = new_weight + turn_weight_penalty;
             edge.data.duration = new_duration + turn_duration_penalty;
-			edge.data.consumption = new_consumption;
+			edge.data.driving_factor = new_driving_factor;
+			edge.data.resistance_factor = new_driving_factor;
         }
     };
 

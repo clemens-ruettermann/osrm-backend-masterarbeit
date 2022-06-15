@@ -12,20 +12,21 @@ namespace contractor
 struct ContractorEdgeData
 {
     ContractorEdgeData()
-        : weight(0), duration(0), distance(0), consumption(0), id(0), originalEdges(0), shortcut(0), forward(0),
+        : weight(0), duration(0), distance(0), driving_factor(0), resistance_factor(0), id(0), originalEdges(0), shortcut(0), forward(0),
           backward(0)
     {
     }
     ContractorEdgeData(EdgeWeight weight,
                        EdgeWeight duration,
                        EdgeDistance distance,
-                       EdgeConsumption consumption,
+					   EdgeDrivingFactor driving_factor,
+					   EdgeResistanceFactor resistance_factor,
                        unsigned original_edges,
                        unsigned id,
                        bool shortcut,
                        bool forward,
                        bool backward)
-        : weight(weight), duration(duration), distance(distance), consumption(consumption), id(id),
+        : weight(weight), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor), id(id),
           originalEdges(std::min((1u << 29) - 1u, original_edges)), shortcut(shortcut),
           forward(forward), backward(backward)
     {
@@ -33,7 +34,8 @@ struct ContractorEdgeData
     EdgeWeight weight;
     EdgeWeight duration;
     EdgeDistance distance;
-	EdgeConsumption consumption;
+	EdgeDrivingFactor driving_factor;
+	EdgeResistanceFactor resistance_factor;
     unsigned id;
     unsigned originalEdges : 29;
     bool shortcut : 1;

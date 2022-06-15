@@ -42,7 +42,8 @@ void relaxBorderEdges(const DataFacade<mld::Algorithm> &facade,
                       const EdgeWeight weight,
                       const EdgeDuration duration,
                       const EdgeDistance distance,
-					  const EdgeConsumption consumption,
+					  const EdgeDrivingFactor driving_factor,
+					  const EdgeResistanceFactor resistance_factor,
                       typename SearchEngineData<mld::Algorithm>::ManyToManyQueryHeap &query_heap,
                       LevelID level)
 {
@@ -63,7 +64,8 @@ void relaxBorderEdges(const DataFacade<mld::Algorithm> &facade,
             const auto node_weight = facade.GetNodeWeight(node_id);
             const auto node_duration = facade.GetNodeDuration(node_id);
             const auto node_distance = facade.GetNodeDistance(node_id);
-            const auto node_consumption = facade.GetNodeConsumption(node_id);
+			const auto node_driving_factor = facade.GetNodeDrivingFactor(node_id);
+			const auto node_resistance_factor = facade.GetNodeResistanceFactor(node_id);
             const auto turn_weight = node_weight + facade.GetWeightPenaltyForEdgeID(turn_id);
             const auto turn_duration = node_duration + facade.GetDurationPenaltyForEdgeID(turn_id);
 
@@ -71,23 +73,25 @@ void relaxBorderEdges(const DataFacade<mld::Algorithm> &facade,
             const auto to_weight = weight + turn_weight;
             const auto to_duration = duration + turn_duration;
             const auto to_distance = distance + node_distance;
-			const auto to_consumption = consumption + node_consumption;
+			const auto to_driving_factor = driving_factor + node_driving_factor;
+			const auto to_resistance_factor = resistance_factor + node_resistance_factor;
 
             // New Node discovered -> Add to Heap + Node Info Storage
             const auto toHeapNode = query_heap.GetHeapNodeIfWasInserted(to);
             if (!toHeapNode)
             {
-                query_heap.Insert(to, to_weight, {node, false, to_duration, to_distance, to_consumption});
+                query_heap.Insert(to, to_weight, {node, false, to_duration, to_distance, to_driving_factor, to_resistance_factor});
             }
             // Found a shorter Path -> Update weight and set new parent
-            else if (std::tie(to_weight, to_duration, to_distance, to_consumption, node) <
+            else if (std::tie(to_weight, to_duration, to_distance, to_driving_factor, to_resistance_factor, node) <
                      std::tie(toHeapNode->weight,
                               toHeapNode->data.duration,
                               toHeapNode->data.distance,
-							  toHeapNode->data.consumption,
+							  toHeapNode->data.driving_factor,
+							  toHeapNode->data.resistance_factor,
                               toHeapNode->data.parent))
             {
-                toHeapNode->data = {node, false, to_duration, to_distance, to_consumption};
+                toHeapNode->data = {node, false, to_duration, to_distance, to_driving_factor, to_resistance_factor};
                 toHeapNode->weight = to_weight;
                 query_heap.DecreaseKey(*toHeapNode);
             }
@@ -123,13 +127,15 @@ void relaxOutgoingEdges(
             auto destination = cell.GetDestinationNodes().begin();
             auto shortcut_durations = cell.GetOutDuration(heapNode.node);
             auto shortcut_distances = cell.GetOutDistance(heapNode.node);
-			auto shortcut_consumptions = cell.GetOutConsumption(heapNode.node);
+			auto shortcut_driving_factors = cell.GetOutDrivingFactor(heapNode.node);
+			auto shortcut_resistance_factors = cell.GetOutResistanceFactor(heapNode.node);
             for (auto shortcut_weight : cell.GetOutWeight(heapNode.node))
             {
                 BOOST_ASSERT(destination != cell.GetDestinationNodes().end());
                 BOOST_ASSERT(!shortcut_durations.empty());
                 BOOST_ASSERT(!shortcut_distances.empty());
-                BOOST_ASSERT(!shortcut_consumptions.empty());
+                BOOST_ASSERT(!shortcut_driving_factors.empty());
+                BOOST_ASSERT(!shortcut_resistance_factors.empty());
                 const NodeID to = *destination;
 
                 if (shortcut_weight != INVALID_EDGE_WEIGHT && heapNode.node != to)
@@ -137,21 +143,23 @@ void relaxOutgoingEdges(
                     const auto to_weight = heapNode.weight + shortcut_weight;
                     const auto to_duration = heapNode.data.duration + shortcut_durations.front();
                     const auto to_distance = heapNode.data.distance + shortcut_distances.front();
-					const auto to_consumption = heapNode.data.consumption + shortcut_consumptions.front();
+					const auto to_driving_factor = heapNode.data.driving_factor + shortcut_driving_factors.front();
+					const auto to_resistance_factor = heapNode.data.resistance_factor + shortcut_resistance_factors.front();
                     const auto toHeapNode = query_heap.GetHeapNodeIfWasInserted(to);
                     if (!toHeapNode)
                     {
                         query_heap.Insert(
-                            to, to_weight, {heapNode.node, true, to_duration, to_distance, to_consumption});
+                            to, to_weight, {heapNode.node, true, to_duration, to_distance, to_driving_factor, to_resistance_factor});
                     }
-                    else if (std::tie(to_weight, to_duration, to_distance, to_consumption, heapNode.node) <
+                    else if (std::tie(to_weight, to_duration, to_distance, to_driving_factor, to_resistance_factor, heapNode.node) <
                              std::tie(toHeapNode->weight,
                                       toHeapNode->data.duration,
                                       toHeapNode->data.distance,
-									  toHeapNode->data.consumption,
+									  toHeapNode->data.driving_factor,
+									  toHeapNode->data.resistance_factor,
                                       toHeapNode->data.parent))
                     {
-                        toHeapNode->data = {heapNode.node, true, to_duration, to_distance, to_consumption};
+                        toHeapNode->data = {heapNode.node, true, to_duration, to_distance, to_driving_factor, to_resistance_factor};
                         toHeapNode->weight = to_weight;
                         query_heap.DecreaseKey(*toHeapNode);
                     }
@@ -159,24 +167,28 @@ void relaxOutgoingEdges(
                 ++destination;
                 shortcut_durations.advance_begin(1);
                 shortcut_distances.advance_begin(1);
-				shortcut_consumptions.advance_begin(1);
+				shortcut_driving_factors.advance_begin(1);
+	            shortcut_resistance_factors.advance_begin(1);
             }
             BOOST_ASSERT(shortcut_durations.empty());
             BOOST_ASSERT(shortcut_distances.empty());
-            BOOST_ASSERT(shortcut_consumptions.empty());
+            BOOST_ASSERT(shortcut_driving_factors.empty());
+            BOOST_ASSERT(shortcut_resistance_factors.empty());
         }
         else
         { // Shortcuts in backward direction
             auto source = cell.GetSourceNodes().begin();
             auto shortcut_durations = cell.GetInDuration(heapNode.node);
             auto shortcut_distances = cell.GetInDistance(heapNode.node);
-            auto shortcut_consumptions = cell.GetInConsumption(heapNode.node);
+	        auto shortcut_driving_factors = cell.GetInDrivingFactor(heapNode.node);
+	        auto shortcut_resistance_factors = cell.GetInResistanceFactor(heapNode.node);
             for (auto shortcut_weight : cell.GetInWeight(heapNode.node))
             {
                 BOOST_ASSERT(source != cell.GetSourceNodes().end());
                 BOOST_ASSERT(!shortcut_durations.empty());
                 BOOST_ASSERT(!shortcut_distances.empty());
-                BOOST_ASSERT(!shortcut_consumptions.empty());
+                BOOST_ASSERT(!shortcut_driving_factors.empty());
+                BOOST_ASSERT(!shortcut_resistance_factors.empty());
                 const NodeID to = *source;
 
                 if (shortcut_weight != INVALID_EDGE_WEIGHT && heapNode.node != to)
@@ -184,21 +196,23 @@ void relaxOutgoingEdges(
                     const auto to_weight = heapNode.weight + shortcut_weight;
                     const auto to_duration = heapNode.data.duration + shortcut_durations.front();
                     const auto to_distance = heapNode.data.distance + shortcut_distances.front();
-                    const auto to_consumption = heapNode.data.consumption + shortcut_consumptions.front();
+					const auto to_driving_factor = heapNode.data.driving_factor + shortcut_driving_factors.front();
+                    const auto to_resistance_factor = heapNode.data.resistance_factor + shortcut_resistance_factors.front();
                     const auto toHeapNode = query_heap.GetHeapNodeIfWasInserted(to);
                     if (!toHeapNode)
                     {
                         query_heap.Insert(
-                            to, to_weight, {heapNode.node, true, to_duration, to_distance, to_consumption});
+                            to, to_weight, {heapNode.node, true, to_duration, to_distance, to_driving_factor, to_resistance_factor});
                     }
-                    else if (std::tie(to_weight, to_duration, to_distance, to_consumption, heapNode.node) <
+                    else if (std::tie(to_weight, to_duration, to_distance, to_driving_factor, to_resistance_factor, heapNode.node) <
                              std::tie(toHeapNode->weight,
                                       toHeapNode->data.duration,
                                       toHeapNode->data.distance,
-                                      toHeapNode->data.consumption,
+                                      toHeapNode->data.driving_factor,
+									  toHeapNode->data.resistance_factor,
                                       toHeapNode->data.parent))
                     {
-                        toHeapNode->data = {heapNode.node, true, to_duration, to_distance, to_consumption};
+                        toHeapNode->data = {heapNode.node, true, to_duration, to_distance, to_driving_factor, to_resistance_factor};
                         toHeapNode->weight = to_weight;
                         query_heap.DecreaseKey(*toHeapNode);
                     }
@@ -206,11 +220,13 @@ void relaxOutgoingEdges(
                 ++source;
                 shortcut_durations.advance_begin(1);
                 shortcut_distances.advance_begin(1);
-                shortcut_consumptions.advance_begin(1);
+                shortcut_driving_factors.advance_begin(1);
+                shortcut_resistance_factors.advance_begin(1);
             }
             BOOST_ASSERT(shortcut_durations.empty());
             BOOST_ASSERT(shortcut_distances.empty());
-            BOOST_ASSERT(shortcut_consumptions.empty());
+            BOOST_ASSERT(shortcut_driving_factors.empty());
+            BOOST_ASSERT(shortcut_resistance_factors.empty());
         }
     }
 
@@ -219,7 +235,8 @@ void relaxOutgoingEdges(
                                 heapNode.weight,
                                 heapNode.data.duration,
                                 heapNode.data.distance,
-                                heapNode.data.consumption,
+                                heapNode.data.driving_factor,
+                                heapNode.data.resistance_factor,
                                 query_heap,
                                 level);
 }
@@ -228,7 +245,7 @@ void relaxOutgoingEdges(
 // Unidirectional multi-layer Dijkstra search for 1-to-N and N-to-1 matrices
 //
 template <bool DIRECTION>
-std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight> >
+std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight> >
 oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                 const DataFacade<Algorithm> &facade,
                 const std::vector<PhantomNode> &phantom_nodes,
@@ -240,11 +257,12 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
     std::vector<EdgeDuration> durations_table(phantom_indices.size(), MAXIMAL_EDGE_DURATION);
     std::vector<EdgeDistance> distances_table(calculate_distance ? phantom_indices.size() : 0,
                                               MAXIMAL_EDGE_DISTANCE);
-	std::vector<EdgeConsumption> consumptions_table(phantom_indices.size(), MAXIMAL_EDGE_CONSUMPTION);
+	std::vector<EdgeDrivingFactor> driving_factors_table(phantom_indices.size(), MAXIMAL_EDGE_DRIVING_FACTOR);
+	std::vector<EdgeResistanceFactor> resistance_factors_table(phantom_indices.size(), INVALID_EDGE_RESISTANCE_FACTOR);
 	std::vector<NodeID> middle_nodes_table(phantom_indices.size(), SPECIAL_NODEID);
 
     // Collect destination (source) nodes into a map
-    std::unordered_multimap<NodeID, std::tuple<std::size_t, EdgeWeight, EdgeDuration, EdgeDistance, EdgeConsumption>>
+    std::unordered_multimap<NodeID, std::tuple<std::size_t, EdgeWeight, EdgeDuration, EdgeDistance, EdgeDrivingFactor, EdgeResistanceFactor>>
         target_nodes_index;
     target_nodes_index.reserve(phantom_indices.size());
     for (std::size_t index = 0; index < phantom_indices.size(); ++index)
@@ -261,7 +279,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                                      phantom_node.GetForwardWeightPlusOffset(),
                                      phantom_node.GetForwardDuration(),
                                      phantom_node.GetForwardDistance(),
-									 phantom_node.GetForwardConsumption())});
+									 phantom_node.GetForwardDrivingFactor(),
+									 phantom_node.GetForwardResistanceFactor())});
             if (phantom_node.IsValidReverseTarget())
                 target_nodes_index.insert(
                     {phantom_node.reverse_segment_id.id,
@@ -269,7 +288,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                                      phantom_node.GetReverseWeightPlusOffset(),
                                      phantom_node.GetReverseDuration(),
                                      phantom_node.GetReverseDistance(),
-									 phantom_node.GetReverseConsumption())});
+									 phantom_node.GetReverseDrivingFactor(),
+									 phantom_node.GetReverseResistanceFactor())});
         }
         else if (DIRECTION == REVERSE_DIRECTION)
         {
@@ -280,7 +300,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                                      -phantom_node.GetForwardWeightPlusOffset(),
                                      -phantom_node.GetForwardDuration(),
                                      -phantom_node.GetForwardDistance(),
-									 -phantom_node.GetForwardConsumption())});
+									 -phantom_node.GetForwardDrivingFactor(),
+									 -phantom_node.GetForwardResistanceFactor())});
             if (phantom_node.IsValidReverseSource())
                 target_nodes_index.insert(
                     {phantom_node.reverse_segment_id.id,
@@ -288,7 +309,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                                      -phantom_node.GetReverseWeightPlusOffset(),
                                      -phantom_node.GetReverseDuration(),
                                      -phantom_node.GetReverseDistance(),
-									 -phantom_node.GetReverseConsumption())});
+									 -phantom_node.GetReverseDrivingFactor(),
+									 -phantom_node.GetReverseResistanceFactor())});
         }
     }
 
@@ -299,7 +321,7 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
 
     // Check if node is in the destinations list and update weights/durations
     auto update_values =
-        [&](NodeID node, EdgeWeight weight, EdgeDuration duration, EdgeDistance distance, EdgeConsumption consumption) {
+        [&](NodeID node, EdgeWeight weight, EdgeDuration duration, EdgeDistance distance, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor) {
             auto candidates = target_nodes_index.equal_range(node);
             for (auto it = candidates.first; it != candidates.second;)
             {
@@ -307,26 +329,30 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                 EdgeWeight target_weight;
                 EdgeDuration target_duration;
                 EdgeDistance target_distance;
-	            EdgeConsumption target_consumption;
-                std::tie(index, target_weight, target_duration, target_distance, target_consumption) = it->second;
+				EdgeDrivingFactor target_driving_factor;
+				EdgeResistanceFactor target_resistance_factor;
+                std::tie(index, target_weight, target_duration, target_distance, target_driving_factor, target_resistance_factor) = it->second;
 
                 const auto path_weight = weight + target_weight;
                 if (path_weight >= 0)
                 {
                     const auto path_duration = duration + target_duration;
                     const auto path_distance = distance + target_distance;
-                    const auto path_consumption = consumption + target_consumption;
+					const auto path_driving_factor = driving_factor + target_driving_factor;
+					const auto path_resistance_factor = resistance_factor + target_resistance_factor;
+
 
                     EdgeDistance nulldistance = 0;
                     auto &current_distance =
                         distances_table.empty() ? nulldistance : distances_table[index];
 
-                    if (std::tie(path_weight, path_duration, path_distance, path_consumption) <
-                        std::tie(weights_table[index], durations_table[index], current_distance, consumptions_table[index]))
+                    if (std::tie(path_weight, path_duration, path_distance, path_driving_factor, path_resistance_factor) <
+                        std::tie(weights_table[index], durations_table[index], current_distance, driving_factors_table[index], resistance_factors_table[index]))
                     {
                         weights_table[index] = path_weight;
                         durations_table[index] = path_duration;
-						consumptions_table[index] = path_consumption;
+						driving_factors_table[index] = path_driving_factor;
+						resistance_factors_table[index] = path_resistance_factor;
                         current_distance = path_distance;
                         middle_nodes_table[index] = node;
                     }
@@ -345,20 +371,21 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                            EdgeWeight initial_weight,
                            EdgeDuration initial_duration,
                            EdgeDistance initial_distance,
-                           EdgeConsumption initial_consumption) {
+                           EdgeDrivingFactor initial_driving_factor,
+						   EdgeResistanceFactor initial_resistance_factor) {
         if (target_nodes_index.count(node))
         {
             // Source and target on the same edge node. If target is not reachable directly via
             // the node (e.g destination is before source on oneway segment) we want to allow
             // node to be visited later in the search along a reachable path.
             // Therefore, we manually run first step of search without marking node as visited.
-            update_values(node, initial_weight, initial_duration, initial_distance, initial_consumption);
+            update_values(node, initial_weight, initial_duration, initial_distance, initial_driving_factor, initial_resistance_factor);
             relaxBorderEdges<DIRECTION>(
-                facade, node, initial_weight, initial_duration, initial_distance, initial_consumption, query_heap, 0);
+                facade, node, initial_weight, initial_duration, initial_distance, initial_driving_factor, initial_resistance_factor, query_heap, 0);
         }
         else
         {
-            query_heap.Insert(node, initial_weight, {node, initial_duration, initial_distance, initial_consumption});
+            query_heap.Insert(node, initial_weight, {node, initial_duration, initial_distance, initial_driving_factor, initial_resistance_factor});
         }
     };
 
@@ -373,7 +400,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                             -phantom_node.GetForwardWeightPlusOffset(),
                             -phantom_node.GetForwardDuration(),
                             -phantom_node.GetForwardDistance(),
-							-phantom_node.GetForwardConsumption());
+							-phantom_node.GetForwardDrivingFactor(),
+							-phantom_node.GetForwardResistanceFactor());
             }
 
             if (phantom_node.IsValidReverseSource())
@@ -382,7 +410,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                             -phantom_node.GetReverseWeightPlusOffset(),
                             -phantom_node.GetReverseDuration(),
                             -phantom_node.GetReverseDistance(),
-							-phantom_node.GetReverseConsumption());
+							-phantom_node.GetReverseDrivingFactor(),
+							-phantom_node.GetReverseResistanceFactor());
             }
         }
         else if (DIRECTION == REVERSE_DIRECTION)
@@ -393,7 +422,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                             phantom_node.GetForwardWeightPlusOffset(),
                             phantom_node.GetForwardDuration(),
                             phantom_node.GetForwardDistance(),
-							phantom_node.GetForwardConsumption());
+							phantom_node.GetForwardDrivingFactor(),
+							phantom_node.GetForwardResistanceFactor());
             }
 
             if (phantom_node.IsValidReverseTarget())
@@ -402,7 +432,8 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                             phantom_node.GetReverseWeightPlusOffset(),
                             phantom_node.GetReverseDuration(),
                             phantom_node.GetReverseDistance(),
-							phantom_node.GetReverseConsumption());
+							phantom_node.GetReverseDrivingFactor(),
+							phantom_node.GetReverseResistanceFactor());
             }
         }
     }
@@ -415,14 +446,19 @@ oneToManySearch(SearchEngineData<Algorithm> &engine_working_data,
 
         // Update values
         update_values(
-            heapNode.node, heapNode.weight, heapNode.data.duration, heapNode.data.distance, heapNode.data.consumption);
+            heapNode.node, heapNode.weight, heapNode.data.duration, heapNode.data.distance, heapNode.data.driving_factor, heapNode.data.resistance_factor);
 
         // Relax outgoing edges
         relaxOutgoingEdges<DIRECTION>(
             facade, heapNode, query_heap, phantom_nodes, phantom_index, phantom_indices);
     }
 
-    return std::make_tuple(std::move(durations_table), std::move(distances_table), std::move(consumptions_table), std::move(weights_table));
+	std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>> consumption_factors_table;
+	consumption_factors_table.reserve(durations_table.size());
+	for (size_t i = 0; i < driving_factors_table.size(); i++) {
+		consumption_factors_table.template emplace_back(std::make_pair(driving_factors_table[i], resistance_factors_table[i]));
+	}
+    return std::make_tuple(std::move(durations_table), std::move(distances_table), std::move(consumption_factors_table), std::move(weights_table));
 }
 
 //
@@ -438,7 +474,8 @@ void forwardRoutingStep(const DataFacade<Algorithm> &facade,
                         std::vector<EdgeWeight> &weights_table,
                         std::vector<EdgeDuration> &durations_table,
                         std::vector<EdgeDistance> &distances_table,
-                        std::vector<EdgeConsumption> &consumptions_table,
+                        std::vector<EdgeDrivingFactor> &driving_factors_table,
+                        std::vector<EdgeResistanceFactor> &resistance_factors_table,
                         std::vector<NodeID> &middle_nodes_table,
                         const PhantomNode &phantom_node)
 {
@@ -458,7 +495,8 @@ void forwardRoutingStep(const DataFacade<Algorithm> &facade,
         const auto target_weight = current_bucket.weight;
         const auto target_duration = current_bucket.duration;
         const auto target_distance = current_bucket.distance;
-        const auto target_consumption = current_bucket.consumption;
+        const auto target_driving_factor = current_bucket.driving_factor;
+        const auto target_resistance_factor = current_bucket.resistance_factor;
 
         // Get the value location in the results tables:
         //  * row-major direct (row_idx, column_idx) index for forward direction
@@ -468,7 +506,8 @@ void forwardRoutingStep(const DataFacade<Algorithm> &facade,
                                   : row_idx + column_idx * number_of_sources;
         auto &current_weight = weights_table[location];
         auto &current_duration = durations_table[location];
-        auto &current_consumption = consumptions_table[location];
+        auto &current_driving_factor = driving_factors_table[location];
+        auto &current_resistance_factor = resistance_factors_table[location];
 
         EdgeDistance nulldistance = 0;
         auto &current_distance = distances_table.empty() ? nulldistance : distances_table[location];
@@ -477,7 +516,8 @@ void forwardRoutingStep(const DataFacade<Algorithm> &facade,
         auto new_weight = heapNode.weight + target_weight;
         auto new_duration = heapNode.data.duration + target_duration;
         auto new_distance = heapNode.data.distance + target_distance;
-        auto new_consumption = heapNode.data.consumption + target_consumption;
+		auto new_driving_factor = heapNode.data.driving_factor + target_driving_factor;
+		auto new_resistance_factor = heapNode.data.resistance_factor + target_resistance_factor;
 
         if (new_weight >= 0 && std::tie(new_weight, new_duration, new_distance) <
                                    std::tie(current_weight, current_duration, current_distance))
@@ -485,7 +525,8 @@ void forwardRoutingStep(const DataFacade<Algorithm> &facade,
             current_weight = new_weight;
             current_duration = new_duration;
             current_distance = new_distance;
-			current_consumption = new_consumption;
+			current_driving_factor = new_driving_factor;
+			current_resistance_factor = new_resistance_factor;
             middle_nodes_table[location] = heapNode.node;
         }
     }
@@ -512,7 +553,8 @@ void backwardRoutingStep(const DataFacade<Algorithm> &facade,
                                            heapNode.weight,
                                            heapNode.data.duration,
                                            heapNode.data.distance,
-										   heapNode.data.consumption);
+										   heapNode.data.driving_factor,
+										   heapNode.data.resistance_factor);
 
     const auto &partition = facade.GetMultiLevelPartition();
     const auto maximal_level = partition.GetNumberOfLevels() - 1;
@@ -557,7 +599,7 @@ void retrievePackedPathFromSearchSpace(NodeID middle_node_id,
 }
 
 template <bool DIRECTION>
-std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight>>
+std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight>>
 manyToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                  const DataFacade<Algorithm> &facade,
                  const std::vector<PhantomNode> &phantom_nodes,
@@ -573,7 +615,8 @@ manyToManySearch(SearchEngineData<Algorithm> &engine_working_data,
     std::vector<EdgeDuration> durations_table(number_of_entries, MAXIMAL_EDGE_DURATION);
     std::vector<EdgeDistance> distances_table(calculate_distance ? number_of_entries : 0,
                                               INVALID_EDGE_DISTANCE);
-	std::vector<EdgeConsumption> consumptions_table(number_of_entries, MAXIMAL_EDGE_CONSUMPTION);
+	std::vector<EdgeDrivingFactor> driving_factors_table(number_of_entries, MAXIMAL_EDGE_DRIVING_FACTOR);
+	std::vector<EdgeResistanceFactor> resistance_factors_table(number_of_entries, INVALID_EDGE_RESISTANCE_FACTOR);
 	std::vector<NodeID> middle_nodes_table(number_of_entries, SPECIAL_NODEID);
 
     std::vector<NodeBucket> search_space_with_buckets;
@@ -633,13 +676,19 @@ manyToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                                           weights_table,
                                           durations_table,
                                           distances_table,
-										  consumptions_table,
+										  driving_factors_table,
+										  resistance_factors_table,
                                           middle_nodes_table,
                                           source_phantom);
         }
     }
 
-    return std::make_tuple(std::move(durations_table), std::move(distances_table), std::move(consumptions_table), std::move(weights_table));
+	std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>> consumption_factors_table;
+	consumption_factors_table.reserve(durations_table.size());
+	for (size_t i = 0; i < driving_factors_table.size(); i++) {
+		consumption_factors_table.template emplace_back(std::make_pair(driving_factors_table[i], resistance_factors_table[i]));
+	}
+    return std::make_tuple(std::move(durations_table), std::move(distances_table), std::move(consumption_factors_table), std::move(weights_table));
 }
 
 } // namespace mld
@@ -657,7 +706,7 @@ manyToManySearch(SearchEngineData<Algorithm> &engine_working_data,
 //   then search is performed on a reversed graph with phantom nodes with flipped roles and
 //   returning a transposed matrix.
 template <>
-std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption> , std::vector<EdgeWeight>>
+std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>> , std::vector<EdgeWeight>>
 manyToManySearch(SearchEngineData<mld::Algorithm> &engine_working_data,
                  const DataFacade<mld::Algorithm> &facade,
                  const std::vector<PhantomNode> &phantom_nodes,

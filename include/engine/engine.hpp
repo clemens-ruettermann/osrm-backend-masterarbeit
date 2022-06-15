@@ -40,22 +40,19 @@ class EngineInterface
     virtual Status Match(const api::MatchParameters &parameters, api::ResultT &result) const = 0;
     virtual Status Tile(const api::TileParameters &parameters, api::ResultT &result) const = 0;
 
-	virtual std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight> >
+	virtual std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight> >
 	ManyToManyInternal(const std::vector<PhantomNodePair> &phantom_node_pairs,
 	                   const std::vector<std::size_t> &source_indices,
 	                   const std::vector<std::size_t> &target_indices,
 	                   const bool & calculate_distance) const = 0;
 
-	virtual Status
-	ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_node_pairs,
-	                 std::vector<guidance::LegGeometry> & result) const = 0;
-
+	virtual Status ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_node_pairs, std::vector<guidance::LegGeometry> & result) const = 0;
 	virtual Status ViaRouteInternal(const std::vector<util::Coordinate> &coords, util::json::Object &result) const = 0;
 	virtual Status ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_nodes, util::json::Object &result) const = 0;
 	virtual Status ViaRouteInternal(const std::vector<util::Coordinate> &coords, std::vector<guidance::LegGeometry> & result) const = 0;
 
 	virtual Status
-	ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_nodes, std::vector<guidance::LegGeometry> & result, RouteConsumption & last_route_consumption) const = 0;
+	ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_nodes, std::vector<guidance::LegGeometry> & result, std::int64_t & last_route_consumption, const double wltp, const double car_weight) const = 0;
 
 	virtual PhantomNodePair GetPhantomNodePair(const util::Coordinate & coordinate) const = 0;
 	virtual std::vector<PhantomNodePair> GetPhantomNodePairs(const std::vector<util::Coordinate> & coordinates) const = 0;
@@ -164,7 +161,7 @@ template <typename Algorithm> class Engine final : public EngineInterface
 		return nearest_plugin.GetSnappedPhantomNodes(GetAlgorithms(params), coordinates);
 	}
 
-	std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight> >
+	std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight> >
 	ManyToManyInternal(const std::vector<PhantomNodePair> &phantom_node_pairs,
 	                   const std::vector<std::size_t> &source_indices,
 	                   const std::vector<std::size_t> &target_indices,
@@ -179,8 +176,8 @@ template <typename Algorithm> class Engine final : public EngineInterface
 	                 std::vector<guidance::LegGeometry> & result) const override {
 		api::BaseParameters params;
 		params.exclude.emplace_back("ferry");
-		RouteConsumption dummy;
-		return route_plugin.InternalRequest(GetAlgorithms(params), phantom_node_pairs, result, dummy);
+		std::int64_t dummy;
+		return route_plugin.InternalRequest(GetAlgorithms(params), phantom_node_pairs, result, dummy, 0, 0);
 	}
 
 	Status
@@ -211,15 +208,15 @@ template <typename Algorithm> class Engine final : public EngineInterface
 	}
 
 	virtual Status
-	ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_node_pairs, std::vector<guidance::LegGeometry> & result, RouteConsumption & last_route_consumption) const override {
+	ViaRouteInternal(const std::vector<PhantomNodePair> &phantom_node_pairs, std::vector<guidance::LegGeometry> & result, std::int64_t & last_route_consumption, const double wltp, const double car_weight) const override {
 		api::BaseParameters params;
 		params.exclude.emplace_back("ferry");
-		auto status = route_plugin.InternalRequest(GetAlgorithms(params), phantom_node_pairs, result, last_route_consumption);
+		auto status = route_plugin.InternalRequest(GetAlgorithms(params), phantom_node_pairs, result, last_route_consumption, wltp, car_weight);
 		return status;
 	}
 
 	Status
-	ViaRouteInternalConsumptions(const std::vector<util::Coordinate> &coords, std::vector<RouteConsumption> & consumptions, std::vector<EdgeDistance> & distances) const {
+	ViaRouteInternalConsumptions(const std::vector<util::Coordinate> &coords, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>> & consumptions, std::vector<EdgeDistance> & distances) const {
 		api::BaseParameters params;
 		params.exclude.emplace_back("ferry");
 		std::vector<std::vector<guidance::LegGeometry>> result;
@@ -228,14 +225,15 @@ template <typename Algorithm> class Engine final : public EngineInterface
 			return status;
 		}
 
-		RouteConsumption route_consumption;
+		std::pair<EdgeDrivingFactor, EdgeResistanceFactor > route_consumption;
 		EdgeDistance route_distance;
 		for (const auto & route : result) {
-			route_consumption = 0;
+			route_consumption = std::pair<EdgeDrivingFactor, EdgeResistanceFactor>();
 			route_distance = 0;
 			for (const auto & leg : route) {
 				for (const auto & annotation : leg.annotations) {
-					route_consumption += annotation.consumption;
+					route_consumption.first += annotation.consumption_factor_pair.first;
+					route_consumption.second += annotation.consumption_factor_pair.second;
 					route_distance += annotation.distance;
 				}
 			}

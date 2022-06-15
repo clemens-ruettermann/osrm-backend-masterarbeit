@@ -26,7 +26,8 @@ struct NodeBucket
     EdgeWeight weight;
     EdgeDuration duration;
     EdgeDistance distance;
-	EdgeConsumption consumption;
+	EdgeDrivingFactor driving_factor;
+	EdgeResistanceFactor resistance_factor;
 
     NodeBucket(NodeID middle_node,
                NodeID parent_node,
@@ -35,9 +36,10 @@ struct NodeBucket
                EdgeWeight weight,
                EdgeDuration duration,
                EdgeDistance distance,
-               EdgeConsumption consumption)
+               EdgeDrivingFactor driving_factor,
+			   EdgeResistanceFactor resistance_factor)
         : middle_node(middle_node), parent_node(parent_node), column_index(column_index),
-          from_clique_arc(from_clique_arc), weight(weight), duration(duration), distance(distance), consumption(consumption)
+          from_clique_arc(from_clique_arc), weight(weight), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor)
     {
     }
 
@@ -47,9 +49,10 @@ struct NodeBucket
                EdgeWeight weight,
                EdgeDuration duration,
                EdgeDistance distance,
-               EdgeConsumption consumption)
+               EdgeDrivingFactor driving_factor,
+			   EdgeResistanceFactor resistance_factor)
         : middle_node(middle_node), parent_node(parent_node), column_index(column_index),
-          from_clique_arc(false), weight(weight), duration(duration), distance(distance), consumption(consumption)
+          from_clique_arc(false), weight(weight), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor)
     {
     }
 
@@ -94,7 +97,7 @@ struct NodeBucket
 } // namespace
 
 template <typename Algorithm>
-std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight>>
+std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight>>
 manyToManySearch(SearchEngineData<Algorithm> &engine_working_data,
                  const DataFacade<Algorithm> &facade,
                  const std::vector<PhantomNode> &phantom_nodes,

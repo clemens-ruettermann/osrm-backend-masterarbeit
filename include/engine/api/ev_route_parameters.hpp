@@ -33,10 +33,18 @@ struct EVRouteParameters
 {
 	util::Coordinate start;
 	util::Coordinate end;
-	double upper_capacity_limit_percent = 1.0;
-	double lower_capacity_limit_percent = 0.0;
-    double fallback_speed = INVALID_FALLBACK_SPEED;
-	bool skip_waypoints;
+	double battery_capacity = -1;
+	bool battery_capacity_set = false;
+	double wltp = -1;
+	double weight = -1;
+	double upper_capacity_limit = -1;
+	double lower_capacity_limit = -1;
+
+	double raw_upper_capacity_limit = 100;
+	bool raw_upper_capacity_limit_set = false;
+	double raw_lower_capacity_limit = 0;
+	bool raw_lower_capacity_limit_set = false;
+
 	double search_radius = 10000;
 	double temperature = 20;
 
@@ -78,23 +86,40 @@ struct EVRouteParameters
 			return false;
 		}
 
-        if (fallback_speed <= 0) {
-	        return false;
-		}
-
         if (scale_factor <= 0) {
 	        return false;
         }
 
-		if (upper_capacity_limit_percent < 0) {
+	    if (battery_capacity < 0) {
+		    return false;
+	    }
+
+		if (raw_upper_capacity_limit < 0 || raw_upper_capacity_limit > 100) {
 			return false;
 		}
 
-		if (lower_capacity_limit_percent < 0) {
+		if (raw_lower_capacity_limit < 0) {
 			return false;
 		}
 
-		if (lower_capacity_limit_percent >= upper_capacity_limit_percent) {
+		if (raw_lower_capacity_limit >= raw_upper_capacity_limit) {
+			return false;
+		}
+
+
+	    if (upper_capacity_limit < 0 || upper_capacity_limit > battery_capacity) {
+		    return false;
+	    }
+
+	    if (lower_capacity_limit < 0) {
+		    return false;
+	    }
+
+		if (wltp < 0) {
+			return false;
+		}
+
+		if (weight < 0) {
 			return false;
 		}
 

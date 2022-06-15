@@ -155,7 +155,7 @@ Status TablePlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms,
 }
 
 
-std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight> >
+std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor >>, std::vector<EdgeWeight> >
 TablePlugin::InternalRequest(
 		const RoutingAlgorithmsInterface &algorithms,
 		const std::vector<PhantomNodePair> &phantom_node_pairs,

@@ -80,11 +80,13 @@ using EdgeDuration = std::int32_t;
 using EdgeDistance = float;
 // Consumption is the value in milli Watt to save space (a double would use 16 byte in node_based_edge probablity due to alginment issues)
 // and simplify the calculation
-using EdgeConsumption = std::int32_t;
-using RouteConsumption = std::int64_t;
 using SegmentWeight = std::uint32_t;
 using SegmentDuration = std::uint32_t;
-using SegmentConsumption = std::int32_t;
+//using SegmentConsumption = std::int32_t;
+using EdgeDrivingFactor = double;
+using SegmentDrivingFactor = double;
+using SegmentResistanceFactor = double;
+using EdgeResistanceFactor = double;
 using TurnPenalty = std::int16_t; // turn penalty in 100ms units
 using DataTimestamp = std::string;
 
@@ -120,18 +122,16 @@ static const std::size_t SEGMENT_CONSUMPTION_BITS = 31;
 
 static const SegmentWeight INVALID_SEGMENT_WEIGHT = (1u << SEGMENT_WEIGHT_BITS) - 1;
 static const SegmentDuration INVALID_SEGMENT_DURATION = (1u << SEGMENT_DURATION_BITS) - 1;
-static const SegmentConsumption INVALID_SEGMENT_CONSUMPTION = (1u << SEGMENT_CONSUMPTION_BITS) - 1;
 static const SegmentWeight MAX_SEGMENT_WEIGHT = INVALID_SEGMENT_WEIGHT - 1;
 static const SegmentDuration MAX_SEGMENT_DURATION = INVALID_SEGMENT_DURATION - 1;
-static const SegmentConsumption MAX_SEGMENT_CONSUMPTION = INVALID_SEGMENT_CONSUMPTION - 1;
 static const EdgeWeight INVALID_EDGE_WEIGHT = std::numeric_limits<EdgeWeight>::max();
 static const EdgeDuration MAXIMAL_EDGE_DURATION = std::numeric_limits<EdgeDuration>::max();
-static const EdgeConsumption MAXIMAL_EDGE_CONSUMPTION = std::numeric_limits<EdgeConsumption>::max();
 static const EdgeDistance MAXIMAL_EDGE_DISTANCE = std::numeric_limits<EdgeDistance>::max();
+static const EdgeDrivingFactor MAXIMAL_EDGE_DRIVING_FACTOR = std::numeric_limits<EdgeDrivingFactor>::max();
+static const EdgeDrivingFactor INVALID_EDGE_DRIVING_FACTOR = std::numeric_limits<EdgeDrivingFactor>::max();
+static const EdgeResistanceFactor INVALID_EDGE_RESISTANCE_FACTOR = std::numeric_limits<EdgeResistanceFactor>::max();
 static const TurnPenalty INVALID_TURN_PENALTY = std::numeric_limits<TurnPenalty>::max();
 static const EdgeDistance INVALID_EDGE_DISTANCE = std::numeric_limits<EdgeDistance>::max();
-static const EdgeConsumption INVALID_EDGE_CONSUMPTION = std::numeric_limits<EdgeConsumption>::max();
-static const RouteConsumption INVALID_ROUTE_CONSUMPTION = std::numeric_limits<RouteConsumption>::max();
 
 static const EdgeDistance INVALID_FALLBACK_SPEED = std::numeric_limits<double>::max();
 

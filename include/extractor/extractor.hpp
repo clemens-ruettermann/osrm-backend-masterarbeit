@@ -87,7 +87,8 @@ class Extractor
         std::vector<EdgeWeight> &edge_based_node_weights,
         std::vector<EdgeDuration> &edge_based_node_durations,
         std::vector<EdgeDistance> &edge_based_node_distances,
-        std::vector<EdgeConsumption> &edge_based_node_consumptions,
+        std::vector<EdgeDrivingFactor> &edge_based_node_driving_factors,
+        std::vector<EdgeResistanceFactor> &edge_based_node_resistance_factors,
         util::DeallocatingVector<EdgeBasedEdge> &edge_based_edge_list,
         std::uint32_t &connectivity_checksum);
 

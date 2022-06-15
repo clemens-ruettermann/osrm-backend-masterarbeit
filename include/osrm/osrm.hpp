@@ -165,7 +165,7 @@ class OSRM final
     Status Tile(const TileParameters &parameters, engine::api::ResultT &result) const;
 
 
-	std::vector<MyLegGeometry> RouteInternal(const std::vector<util::Coordinate> & coords) const;
+	std::vector<MyLegGeometry> RouteInternal(const std::vector<util::Coordinate> & coords, const double wltp, const double car_weight) const;
 
 	Status EVRouteDijkstraAlongRoute(EVRouteParameters & parameters, json::Object &result) const;
 	Status EVRouteAlongRoute(EVRouteParameters & already_used_charger_id, json::Object &result) const;
@@ -174,17 +174,20 @@ class OSRM final
 private:
     std::unique_ptr<engine::EngineInterface> engine_;
 	std::unique_ptr<enav::ChargerGraph> charger_graph_;
+	std::vector<enav::Charger> chargers;
 
 	enav::ReachableChargers
 	getReachableChargers(const engine::PhantomNodePair &phantom_node_start, const engine::PhantomNodePair &phantom_node_end,
-	                     const std::vector<enav::Charger> &chargers, const double lower_capacity_limit,
-	                     const double upper_capacity_limit) const ;
+	                     const std::vector<enav::Charger> &chargers, double lower_capacity_limit,
+	                     double upper_capacity_limit, double wltp, double car_weight) const ;
 
 
 	const Status pointsToFinalRoute(EVRouteParameters::OutputFormat output_format, engine::PhantomNodePair start,
 	                                engine::PhantomNodePair end,
-									std::vector<ChargerId> used_charger_ids,
+									const std::vector<ChargerId> & used_charger_ids,
 									std::uint32_t battery_capacity,
+									double wltp,
+									double car_weight,
 	                                json::Object &result) const;
 };
 } // namespace osrm

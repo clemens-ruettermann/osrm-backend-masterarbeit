@@ -21,17 +21,11 @@ ContractorGraph toContractorGraph(NodeID number_of_nodes, InputEdgeContainer inp
 {
     std::vector<ContractorEdge> edges;
     edges.reserve(input_edge_list.size() * 2);
-	auto max_consumption = -2147483647;
-	auto min_consumption = 2147483648;
 
     for (const auto &input_edge : input_edge_list)
     {
         if (input_edge.data.weight == INVALID_EDGE_WEIGHT) {
 	        continue;
-		}
-
-		if (input_edge.data.consumption == INVALID_EDGE_CONSUMPTION) {
-			util::Log(logWARNING) << "INVALID EDGE CONSUMPTION" << std::endl;
 		}
 
 #ifndef NDEBUG
@@ -46,46 +40,35 @@ ContractorGraph toContractorGraph(NodeID number_of_nodes, InputEdgeContainer inp
 
 #endif
 
-		if (max_consumption < input_edge.data.consumption) {
-			max_consumption = input_edge.data.consumption;
-		}
-		if (min_consumption > input_edge.data.consumption) {
-			min_consumption = input_edge.data.consumption;
-		}
         auto new_edge1 = edges.emplace_back(ContractorEdge {input_edge.source,
                            input_edge.target,
                            std::max(input_edge.data.weight, 1),
                            input_edge.data.duration,
                            input_edge.data.distance,
-						   input_edge.data.consumption,
+						   input_edge.data.driving_factor,
+						   input_edge.data.resistance_factor,
                            1,
                            input_edge.data.turn_id,
                            false,
                            input_edge.data.forward,
                            input_edge.data.backward});
 
-#ifdef NON_ZERO_CONSUMPTION
-		BOOST_ASSERT(new_edge1.consumption != 0);
-#endif
+
 
         auto new_edge2 = edges.emplace_back(ContractorEdge {input_edge.target,
                            input_edge.source,
                            std::max(input_edge.data.weight, 1),
                            input_edge.data.duration,
                            input_edge.data.distance,
-						   input_edge.data.consumption,
+						   input_edge.data.driving_factor,
+						   input_edge.data.resistance_factor,
                            1,
                            input_edge.data.turn_id,
                            false,
                            input_edge.data.backward,
                            input_edge.data.forward});
-#ifdef NON_ZERO_CONSUMPTION
-	    BOOST_ASSERT(new_edge2.consumption != 0);
-#endif
-    };
 
-	util::Log(logWARNING) << "Edge consumption max: " << max_consumption << std::flush;
-	util::Log(logWARNING) << "Edge consumption min: " << min_consumption << std::flush;
+    };
 
     tbb::parallel_sort(edges.begin(), edges.end());
 
@@ -113,7 +96,8 @@ ContractorGraph toContractorGraph(NodeID number_of_nodes, InputEdgeContainer inp
         forward_edge.data.weight = reverse_edge.data.weight = INVALID_EDGE_WEIGHT;
         forward_edge.data.duration = reverse_edge.data.duration = MAXIMAL_EDGE_DURATION;
         forward_edge.data.distance = reverse_edge.data.distance = MAXIMAL_EDGE_DISTANCE;
-		forward_edge.data.consumption = reverse_edge.data.consumption = INVALID_EDGE_CONSUMPTION;
+		forward_edge.data.driving_factor = reverse_edge.data.driving_factor = INVALID_EDGE_DRIVING_FACTOR;
+		forward_edge.data.resistance_factor = reverse_edge.data.resistance_factor = INVALID_EDGE_RESISTANCE_FACTOR;
 	    // remove parallel edges
         while (i < edges.size() && edges[i].source == source && edges[i].target == target)
         {
@@ -122,19 +106,21 @@ ContractorGraph toContractorGraph(NodeID number_of_nodes, InputEdgeContainer inp
 	            forward_edge.data.weight = std::min(forward_edge.data.weight, edges[i].data.weight);
 	            forward_edge.data.duration = std::min(forward_edge.data.duration, edges[i].data.duration);
 	            forward_edge.data.distance = std::min(forward_edge.data.distance, edges[i].data.distance);
-	            forward_edge.data.consumption = std::min(forward_edge.data.consumption, edges[i].data.consumption);
+	            forward_edge.data.driving_factor = std::min(forward_edge.data.driving_factor, edges[i].data.driving_factor);
+	            forward_edge.data.resistance_factor = std::min(forward_edge.data.resistance_factor, edges[i].data.resistance_factor);
 
             }
 			if (edges[i].data.backward) {
 				reverse_edge.data.weight = std::min(reverse_edge.data.weight, edges[i].data.weight);
 				reverse_edge.data.duration = std::min(reverse_edge.data.duration, edges[i].data.duration);
 				reverse_edge.data.distance = std::min(reverse_edge.data.distance, edges[i].data.distance);
-				reverse_edge.data.consumption = std::min(reverse_edge.data.consumption, edges[i].data.consumption);
+				reverse_edge.data.driving_factor = std::min(reverse_edge.data.driving_factor, edges[i].data.driving_factor);
+				reverse_edge.data.resistance_factor = std::min(reverse_edge.data.resistance_factor, edges[i].data.resistance_factor);
             }
             ++i;
         }
         // merge edges (s,t) and (t,s) into bidirectional edge
-        if (forward_edge.data.weight == reverse_edge.data.weight && forward_edge.data.consumption == reverse_edge.data.consumption) {
+        if (forward_edge.data.weight == reverse_edge.data.weight && forward_edge.data.driving_factor == reverse_edge.data.driving_factor && forward_edge.data.resistance_factor == reverse_edge.data.resistance_factor) {
             if ((int)forward_edge.data.weight != INVALID_EDGE_WEIGHT)
             {
                 forward_edge.data.backward = true;
@@ -143,21 +129,13 @@ ContractorGraph toContractorGraph(NodeID number_of_nodes, InputEdgeContainer inp
         } else { // insert seperate edges
             if (((int)forward_edge.data.weight) != INVALID_EDGE_WEIGHT) {
                 edges[edge++] = forward_edge;
-				if (forward_edge.data.consumption == INVALID_EDGE_CONSUMPTION
-#ifdef NON_ZERO_CONSUMPTION
-		            || forward_edge.data.consumption == 0
-#endif
-				) {
+				if (forward_edge.data.driving_factor == MAXIMAL_EDGE_DRIVING_FACTOR || forward_edge.data.resistance_factor == INVALID_EDGE_RESISTANCE_FACTOR) {
 					util::Log(logWARNING) << "Inserted edge with invalid consumption";
 				}
             }
             if ((int)reverse_edge.data.weight != INVALID_EDGE_WEIGHT) {
                 edges[edge++] = reverse_edge;
-	            if (reverse_edge.data.consumption == INVALID_EDGE_CONSUMPTION
-#ifdef NON_ZERO_CONSUMPTION
-		            || reverse_edge.data.consumption == 0
-#endif
-				) {
+	            if (reverse_edge.data.driving_factor == MAXIMAL_EDGE_DRIVING_FACTOR || reverse_edge.data.resistance_factor == INVALID_EDGE_RESISTANCE_FACTOR) {
 		            util::Log(logWARNING) << "Inserted edge with invalid consumption";
 	            }
             }
@@ -195,7 +173,8 @@ template <class Edge, typename GraphT> inline std::vector<Edge> toEdges(GraphT g
                 new_edge.data.weight = data.weight;
                 new_edge.data.duration = data.duration;
                 new_edge.data.distance = data.distance;
-				new_edge.data.consumption = data.consumption;
+				new_edge.data.driving_factor = data.driving_factor;
+				new_edge.data.resistance_factor = data.resistance_factor;
                 new_edge.data.shortcut = data.shortcut;
                 new_edge.data.turn_id = data.id;
                 BOOST_ASSERT_MSG(new_edge.data.turn_id != INT_MAX, // 2^31

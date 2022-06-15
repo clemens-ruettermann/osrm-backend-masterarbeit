@@ -185,7 +185,7 @@ void readEdges(const boost::filesystem::path & path, std::shared_ptr<std::vector
 	};
 	reader.ReadStreaming<ChargerGraphEdge>("/charger_graph/edges",boost::make_function_output_iterator(decode_edges));
 
-//	std::sort(edges->begin(), edges->end());
+	std::sort(edges->begin(), edges->end());
 }
 }
 }

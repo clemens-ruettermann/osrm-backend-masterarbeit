@@ -24,7 +24,7 @@ class TablePlugin final : public BasePlugin
                          const api::TableParameters &params,
                          osrm::engine::api::ResultT &result) const;
 
-	std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<EdgeConsumption>, std::vector<EdgeWeight> >
+	std::tuple<std::vector<EdgeDuration>, std::vector<EdgeDistance>, std::vector<std::pair<EdgeDrivingFactor, EdgeResistanceFactor>>, std::vector<EdgeWeight> >
 	InternalRequest(const RoutingAlgorithmsInterface &algorithms, const std::vector<PhantomNodePair> &phantom_node_pairs,
 	                const std::vector<std::size_t> &source_indices,
 	                const std::vector<std::size_t> &target_indices,

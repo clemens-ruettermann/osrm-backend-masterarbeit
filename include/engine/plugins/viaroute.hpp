@@ -37,13 +37,15 @@ class ViaRoutePlugin final : public BasePlugin
                          osrm::engine::api::ResultT &json_result) const;
 
 	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
-						   const std::vector<util::Coordinate> &coords,
+	                       const std::vector<util::Coordinate> &coords,
 						   std::vector<guidance::LegGeometry> & result) const;
 
 	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
 	                       const std::vector<PhantomNodePair> &phantom_nodes,
 	                       std::vector<guidance::LegGeometry> & result,
-						   RouteConsumption & last_route_consumption) const;
+						   std::int64_t & last_route_consumption,
+						   double wltp,
+						   double weight) const;
 
 	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
 	                       const std::vector<util::Coordinate> &coords,
@@ -52,6 +54,11 @@ class ViaRoutePlugin final : public BasePlugin
 	Status InternalRequest(const RoutingAlgorithmsInterface &algorithms,
 	                       const std::vector<PhantomNodePair> &phantom_nodes,
 	                       util::json::Object &json_result) const;
+
+
+
+
+
 
 };
 } // namespace plugins

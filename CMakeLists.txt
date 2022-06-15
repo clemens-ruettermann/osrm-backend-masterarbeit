@@ -245,6 +245,8 @@ add_library(charger_graph
         src/charger_graph/charger_graph.cpp
         include/charger_graph/charger_graph.hpp
         third_party/threadpool/threadpool.h
+        src/charger_graph/files.cpp
+        include/charger_graph/files.hpp
         include/charger_graph/charger_filter.hpp
         include/elevation/geotiff_value_matrix.h)
 
@@ -522,7 +524,8 @@ include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/threadpool")
 
 set(MICROTAR_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/microtar/src")
 include_directories(SYSTEM ${MICROTAR_INCLUDE_DIR})
-include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann-json/")
+
+include_directories(SYSTEM "${CMAKE_CURRENT_SOURCE_DIR}/third_party/nlohmann-json")
 
 set(MBXGEOM_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/geometry.hpp-0.9.2/include")
 include_directories(SYSTEM ${MBXGEOM_INCLUDE_DIR})

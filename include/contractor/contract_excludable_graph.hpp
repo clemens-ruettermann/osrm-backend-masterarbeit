@@ -100,12 +100,9 @@ inline auto contractExcludableGraph(ContractorGraph contractor_graph_,
         edge_container.Merge(toEdges<QueryEdge>(std::move(filtered_core_graph)));
     }
 
-#ifdef NON_ZERO_CONSUMPTION
-	for (const auto & edge : edge_container.edges) {
-		BOOST_ASSERT(edge.data.consumption != 0);
-	}
-#endif
-
+    for (const auto & edge : edge_container.edges) {
+        BOOST_ASSERT(edge.data.driving_factor != edge.data.resistance_factor);
+    }
     return GraphAndFilter{QueryGraph{num_nodes, std::move(edge_container.edges)},
                           edge_container.MakeEdgeFilters()};
 }

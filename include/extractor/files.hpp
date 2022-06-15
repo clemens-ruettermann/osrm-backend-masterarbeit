@@ -510,16 +510,6 @@ void readEdgeBasedNodeWeights(const boost::filesystem::path &path, NodeWeightsVe
     storage::serialization::read(reader, "/extractor/edge_based_node_weights", weights);
 }
 
-template <typename NodeWeightsVectorT, typename NodeConsumptionsVectorT>
-void readEdgeBasedNodeWeightsAndConsumptions(const boost::filesystem::path &path, NodeWeightsVectorT &weights, NodeConsumptionsVectorT &consumptions)
-{
-	const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
-	storage::tar::FileReader reader{path, fingerprint};
-
-	storage::serialization::read(reader, "/extractor/edge_based_node_weights", weights);
-	storage::serialization::read(reader, "/extractor/edge_based_node_consumptions", consumptions);
-}
-
 template <typename NodeDistancesVectorT>
 void readEdgeBasedNodeDistances(const boost::filesystem::path &path,
                                 NodeDistancesVectorT &distances)
@@ -530,22 +520,14 @@ void readEdgeBasedNodeDistances(const boost::filesystem::path &path,
     storage::serialization::read(reader, "/extractor/edge_based_node_distances", distances);
 }
 
-template <typename NodeConsumptionsVectorT>
-void readEdgeBasedNodeConsumptions(const boost::filesystem::path &path, NodeConsumptionsVectorT &consumptions)
-{
-	const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
-	storage::tar::FileReader reader{path, fingerprint};
 
-	storage::serialization::read(reader, "/extractor/edge_based_node_consumptions", consumptions);
-}
-
-
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDistancesVectorT, typename NodeConsumptionVectorT>
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDistancesVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
 void writeEdgeBasedNodeWeightsDurationsDistancesConsumptions(const boost::filesystem::path &path,
                                                              const NodeWeightsVectorT &weights,
                                                              const NodeDurationsVectorT &durations,
                                                              const NodeDistancesVectorT &distances,
-															 const NodeConsumptionVectorT &consumptions)
+															 const NodeDrivingFactorsVectorT &driving_factors,
+															 const NodeResistanceFactorsVectorT &resistance_factors)
 {
     const auto fingerprint = storage::tar::FileWriter::GenerateFingerprint;
     storage::tar::FileWriter writer{path, fingerprint};
@@ -553,35 +535,40 @@ void writeEdgeBasedNodeWeightsDurationsDistancesConsumptions(const boost::filesy
     storage::serialization::write(writer, "/extractor/edge_based_node_weights", weights);
     storage::serialization::write(writer, "/extractor/edge_based_node_durations", durations);
     storage::serialization::write(writer, "/extractor/edge_based_node_distances", distances);
-    storage::serialization::write(writer, "/extractor/edge_based_node_consumptions", consumptions);
+    storage::serialization::write(writer, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::write(writer, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeConsumptionVectorT>
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
 void readEdgeBasedNodeWeightsDurationsConsumptions(const boost::filesystem::path &path,
                                                    NodeWeightsVectorT &weights,
                                                    NodeDurationsVectorT &durations,
-												   NodeConsumptionVectorT &consumptions)
+												   NodeDrivingFactorsVectorT &driving_factors,
+												   NodeResistanceFactorsVectorT & resistance_factors)
 {
     const auto fingerprint = storage::tar::FileReader::VerifyFingerprint;
     storage::tar::FileReader reader{path, fingerprint};
 
     storage::serialization::read(reader, "/extractor/edge_based_node_weights", weights);
     storage::serialization::read(reader, "/extractor/edge_based_node_durations", durations);
-    storage::serialization::read(reader, "/extractor/edge_based_node_consumptions", consumptions);
+    storage::serialization::read(reader, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::read(reader, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
-template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeConsumptionsVectorT>
+template <typename NodeWeightsVectorT, typename NodeDurationsVectorT, typename NodeDrivingFactorsVectorT, typename NodeResistanceFactorsVectorT>
 void writeEdgeBasedNodeWeightsDurationsConsumptions(const boost::filesystem::path &path,
                                                     const NodeWeightsVectorT &weights,
                                                     const NodeDurationsVectorT &durations,
-													const NodeConsumptionsVectorT &consumptions)
+													const NodeDrivingFactorsVectorT &driving_factors,
+													const NodeResistanceFactorsVectorT &resistance_factors)
 {
     const auto fingerprint = storage::tar::FileWriter::GenerateFingerprint;
     storage::tar::FileWriter writer{path, fingerprint};
 
     storage::serialization::write(writer, "/extractor/edge_based_node_weights", weights);
     storage::serialization::write(writer, "/extractor/edge_based_node_durations", durations);
-    storage::serialization::write(writer, "/extractor/edge_based_node_consumptions", consumptions);
+    storage::serialization::write(writer, "/extractor/edge_based_node_driving_factors", driving_factors);
+    storage::serialization::write(writer, "/extractor/edge_based_node_resistance_factors", resistance_factors);
 }
 
 template <typename RTreeT>

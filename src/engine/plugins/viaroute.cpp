@@ -232,7 +232,9 @@ Status ViaRoutePlugin::InternalRequest(
 Status ViaRoutePlugin::InternalRequest(const RoutingAlgorithmsInterface &algorithms,
                        const std::vector<PhantomNodePair> &phantom_node_pairs,
                        std::vector<guidance::LegGeometry> & result,
-					   RouteConsumption & last_route_consumption) const {
+					   std::int64_t & last_route_consumption,
+					   const double wltp,
+					   const double weight) const {
 	result.clear();
 	InternalRouteResult route;
 
@@ -272,7 +274,7 @@ Status ViaRoutePlugin::InternalRequest(const RoutingAlgorithmsInterface &algorit
 
 		if (i == number_of_subroutes - 1) {
 			for (auto & annotation : leg_geometry.annotations) {
-				last_route_consumption += annotation.consumption;
+				last_route_consumption += annotation.consumption_factor_pair.first * wltp + annotation.consumption_factor_pair.second * weight;
 			}
 		}
 		result.push_back(std::move(leg_geometry));
@@ -333,6 +335,9 @@ Status ViaRoutePlugin::InternalRequest(
 
 	return Status::Ok;
 }
+
+
+
 
 
 } // namespace plugins

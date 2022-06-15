@@ -32,7 +32,7 @@ double calculate_road_resistance(const osrm::enav::Car &_car, double distance, d
 double
 calculate_milli_watt_h_consumption(const osrm::enav::Car &_car, const double traveled_distance, const double avg_speed, const float height);
 
-
+std::pair<double, double> calculate_consumption_factors(const double & traveled_distance, const double & avg_speed, const double & height);
 
 }
 }

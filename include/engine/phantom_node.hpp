@@ -51,8 +51,10 @@ struct PhantomNode
           forward_distance_offset(0), reverse_distance_offset(0),
           forward_duration(MAXIMAL_EDGE_DURATION), reverse_duration(MAXIMAL_EDGE_DURATION),
           forward_duration_offset(0), reverse_duration_offset(0),
-		  forward_consumption(INVALID_EDGE_CONSUMPTION), reverse_consumption(INVALID_EDGE_CONSUMPTION),
-		  forward_consumption_offset(0), reverse_consumption_offset(0),
+		  forward_driving_factor{MAXIMAL_EDGE_DRIVING_FACTOR}, reverse_driving_factor{MAXIMAL_EDGE_DRIVING_FACTOR},
+		  forward_driving_factor_offset{0}, reverse_driving_factor_offset{0},
+		  forward_resistance_factor{INVALID_EDGE_RESISTANCE_FACTOR}, reverse_resistance_factor{INVALID_EDGE_RESISTANCE_FACTOR},
+		  forward_resistance_factor_offset{0}, reverse_resistance_factor_offset{0},
           fwd_segment_position(0), is_valid_forward_source{false}, is_valid_forward_target{false},
           is_valid_reverse_source{false}, is_valid_reverse_target{false}, bearing(0)
 
@@ -107,19 +109,48 @@ struct PhantomNode
         return reverse_distance + reverse_distance_offset;
     }
 
-	EdgeConsumption GetForwardConsumption() const
+	EdgeDrivingFactor GetForwardDrivingFactor() const
 	{
 		BOOST_ASSERT(forward_segment_id.enabled);
-		return forward_consumption + forward_consumption_offset;
+
+		BOOST_ASSERT(forward_driving_factor != reverse_driving_factor);
+		BOOST_ASSERT(forward_driving_factor != forward_resistance_factor);
+		BOOST_ASSERT(forward_driving_factor != reverse_resistance_factor);
+		return forward_driving_factor + forward_driving_factor_offset;
 	}
 
-	EdgeConsumption GetReverseConsumption() const
+	EdgeDrivingFactor GetReverseDrivingFactor() const
 	{
 		BOOST_ASSERT(reverse_segment_id.enabled);
-		return reverse_consumption + reverse_consumption_offset;
+
+		BOOST_ASSERT(forward_driving_factor != reverse_driving_factor);
+		BOOST_ASSERT(reverse_driving_factor != forward_resistance_factor);
+		BOOST_ASSERT(reverse_driving_factor != reverse_resistance_factor);
+		return reverse_driving_factor + reverse_driving_factor_offset;
 	}
 
-    bool IsBidirected() const { return forward_segment_id.enabled && reverse_segment_id.enabled; }
+	EdgeResistanceFactor GetForwardResistanceFactor() const
+	{
+		BOOST_ASSERT(forward_segment_id.enabled);
+
+		BOOST_ASSERT(forward_resistance_factor != reverse_driving_factor);
+		BOOST_ASSERT(forward_driving_factor != forward_resistance_factor);
+		BOOST_ASSERT(forward_resistance_factor != reverse_resistance_factor);
+		return forward_resistance_factor + forward_resistance_factor_offset;
+	}
+
+	EdgeResistanceFactor GetReverseResistanceFactor() const
+	{
+		BOOST_ASSERT(reverse_segment_id.enabled);
+
+		BOOST_ASSERT(reverse_resistance_factor != reverse_driving_factor);
+		BOOST_ASSERT(reverse_resistance_factor != forward_resistance_factor);
+		BOOST_ASSERT(forward_driving_factor != reverse_resistance_factor);
+		return reverse_resistance_factor + reverse_resistance_factor_offset;
+	}
+
+
+	bool IsBidirected() const { return forward_segment_id.enabled && reverse_segment_id.enabled; }
 
     bool IsValid(const unsigned number_of_nodes) const
     {
@@ -132,8 +163,6 @@ struct PhantomNode
                 (reverse_duration != MAXIMAL_EDGE_DURATION)) &&
                ((forward_distance != INVALID_EDGE_DISTANCE) ||
                 (reverse_distance != INVALID_EDGE_DISTANCE)) &&
-		       ((forward_consumption != INVALID_EDGE_CONSUMPTION) ||
-			    (reverse_consumption != INVALID_EDGE_CONSUMPTION)) &&
                (component.id != INVALID_COMPONENTID);
     }
 
@@ -184,10 +213,15 @@ struct PhantomNode
                          EdgeWeight reverse_duration,
                          EdgeWeight forward_duration_offset,
                          EdgeWeight reverse_duration_offset,
-						 EdgeConsumption forward_consumption,
-						 EdgeConsumption reverse_consumption,
-						 EdgeConsumption forward_consumption_offset,
-						 EdgeConsumption reverse_consumption_offset,
+						 EdgeDrivingFactor forward_driving_factor,
+						 EdgeDrivingFactor  reverse_driving_factor,
+						 EdgeResistanceFactor forward_resistance_factor,
+						 EdgeResistanceFactor reverse_resistance_factor,
+						 EdgeDrivingFactor forward_driving_factor_offset,
+						 EdgeDrivingFactor reverse_driving_factor_offset,
+						 EdgeResistanceFactor forward_resistance_factor_offset,
+						 EdgeResistanceFactor reverse_resistance_factor_offset,
+
                          bool is_valid_forward_source,
                          bool is_valid_forward_target,
                          bool is_valid_reverse_source,
@@ -203,8 +237,10 @@ struct PhantomNode
           reverse_distance_offset{reverse_distance_offset}, forward_duration{forward_duration},
           reverse_duration{reverse_duration}, forward_duration_offset{forward_duration_offset},
           reverse_duration_offset{reverse_duration_offset},
-		  forward_consumption{forward_consumption}, reverse_consumption{reverse_consumption},
-		  forward_consumption_offset{forward_consumption_offset}, reverse_consumption_offset{reverse_consumption_offset},
+		  forward_driving_factor{forward_driving_factor}, reverse_driving_factor{reverse_driving_factor},
+		  forward_resistance_factor{forward_resistance_factor}, reverse_resistance_factor{reverse_resistance_factor},
+		  forward_driving_factor_offset{forward_driving_factor_offset}, reverse_driving_factor_offset{reverse_driving_factor_offset},
+		  forward_resistance_factor_offset{forward_resistance_factor_offset}, reverse_resistance_factor_offset{reverse_resistance_factor_offset},
           component{component.id, component.is_tiny}, location{location},
           input_location{input_location}, fwd_segment_position{other.fwd_segment_position},
           is_valid_forward_source{is_valid_forward_source},
@@ -228,10 +264,14 @@ struct PhantomNode
     EdgeWeight reverse_duration;
     EdgeWeight forward_duration_offset; // TODO: try to remove -> requires path unpacking changes
     EdgeWeight reverse_duration_offset; // TODO: try to remove -> requires path unpacking changes
-	EdgeConsumption forward_consumption;
-	EdgeConsumption reverse_consumption;
-	EdgeConsumption forward_consumption_offset;
-	EdgeConsumption reverse_consumption_offset;
+	EdgeDrivingFactor forward_driving_factor;
+	EdgeDrivingFactor reverse_driving_factor;
+	EdgeResistanceFactor forward_resistance_factor;
+	EdgeResistanceFactor reverse_resistance_factor;
+	EdgeDrivingFactor forward_driving_factor_offset;
+	EdgeDrivingFactor reverse_driving_factor_offset;
+	EdgeResistanceFactor forward_resistance_factor_offset;
+	EdgeResistanceFactor reverse_resistance_factor_offset;
     ComponentID component;
 
     util::Coordinate location; // this is the coordinate of x
@@ -246,7 +286,7 @@ struct PhantomNode
     unsigned short bearing : 12;
 };
 
-static_assert(sizeof(PhantomNode) == 96, "PhantomNode has more padding then expected");
+//static_assert(sizeof(PhantomNode) == 96, "PhantomNode has more padding then expected");
 
 using PhantomNodePair = std::pair<PhantomNode, PhantomNode>;
 

@@ -15,12 +15,15 @@ struct ChargerGraphEdge {
 	NodeID start;
 	NodeID end;
 	EdgeWeight weight;
-	EdgeConsumption consumption;
+	EdgeDrivingFactor driving_factor;
+	EdgeResistanceFactor resistance_factor;
+
 
 public:
 	ChargerGraphEdge() = default;
-	ChargerGraphEdge(const ChargerGraphEdge & o) : start(o.start), end(o.end), weight(o.weight), consumption(o.consumption) {}
-	ChargerGraphEdge(NodeID start_, NodeID end_, EdgeWeight weight_, EdgeConsumption consumption_) : start(start_), end(end_), weight(weight_), consumption(consumption_) {}
+	ChargerGraphEdge(const ChargerGraphEdge & o) : start(o.start), end(o.end), weight(o.weight), driving_factor(o.driving_factor), resistance_factor(o.resistance_factor) {}
+	ChargerGraphEdge(NodeID start_, NodeID end_, EdgeWeight weight_, EdgeDrivingFactor driving_factor_, EdgeResistanceFactor resistance_factor_)
+		: start(start_), end(end_), weight(weight_), driving_factor(driving_factor_), resistance_factor(resistance_factor_) {}
 
 	bool operator<(const ChargerGraphEdge &rhs) const {
 		if (start < rhs.start)

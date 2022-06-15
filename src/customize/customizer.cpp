@@ -82,14 +82,15 @@ auto LoadAndUpdateEdgeExpandedGraph(const CustomizationConfig &config,
                                     std::vector<EdgeWeight> &node_weights,
                                     std::vector<EdgeDuration> &node_durations,
                                     std::vector<EdgeDistance> &node_distances,
-									std::vector<EdgeConsumption> &node_consumption,
+									std::vector<EdgeDrivingFactor> &node_driving_factors,
+									std::vector<EdgeResistanceFactor> &node_resistance_factors,
                                     std::uint32_t &connectivity_checksum)
 {
     updater::Updater updater(config.updater_config);
 
     std::vector<extractor::EdgeBasedEdge> edge_based_edge_list;
     EdgeID num_nodes = updater.LoadAndUpdateEdgeExpandedGraph(
-        edge_based_edge_list, node_weights, node_durations, node_consumption, connectivity_checksum);
+        edge_based_edge_list, node_weights, node_durations, node_driving_factors, node_resistance_factors, connectivity_checksum);
 
     extractor::files::readEdgeBasedNodeDistances(config.GetPath(".osrm.enw"), node_distances);
 
@@ -140,10 +141,11 @@ int Customizer::Run(const CustomizationConfig &config)
     std::vector<EdgeWeight> node_weights;
     std::vector<EdgeDuration> node_durations; // TODO: remove when durations are optional
     std::vector<EdgeDistance> node_distances; // TODO: remove when distances are optional
-    std::vector<EdgeConsumption> node_consumptions; // TODO: remove when distances are optional
+    std::vector<EdgeDrivingFactor> node_driving_factors; // TODO: remove when distances are optional
+	std::vector<EdgeResistanceFactor> node_resistance_factors;
     std::uint32_t connectivity_checksum = 0;
     auto graph = LoadAndUpdateEdgeExpandedGraph(
-        config, mlp, node_weights, node_durations, node_distances, node_consumptions, connectivity_checksum);
+        config, mlp, node_weights, node_durations, node_distances, node_driving_factors, node_resistance_factors, connectivity_checksum);
     BOOST_ASSERT(graph.GetNumberOfNodes() == node_weights.size());
     std::for_each(node_weights.begin(), node_weights.end(), [](auto &w) { w &= 0x7fffffff; });
     util::Log() << "Loaded edge based graph: " << graph.GetNumberOfEdges() << " edges, "
@@ -186,7 +188,8 @@ int Customizer::Run(const CustomizationConfig &config)
                                           std::move(node_weights),
                                           std::move(node_durations),
                                           std::move(node_distances),
-										  std::move(node_consumptions)};
+										  std::move(node_driving_factors),
+										  std::move(node_resistance_factors)};
     customizer::files::writeGraph(
         config.GetPath(".osrm.mldgr"), shaved_graph, connectivity_checksum);
     TIMER_STOP(writing_graph);

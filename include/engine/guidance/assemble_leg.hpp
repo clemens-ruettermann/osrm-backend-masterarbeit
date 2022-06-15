@@ -134,7 +134,8 @@ inline RouteLeg assembleLeg(const datafacade::BaseDataFacade &facade,
 {
     const auto target_duration = (target_traversed_in_reverse ? target_node.reverse_duration : target_node.forward_duration);
     const auto target_weight = (target_traversed_in_reverse ? target_node.reverse_weight : target_node.forward_weight);
-    const auto target_consumption = (target_traversed_in_reverse ? target_node.reverse_consumption : target_node.forward_consumption);
+    const auto target_driving_factor = (target_traversed_in_reverse ? target_node.reverse_driving_factor : target_node.forward_driving_factor);
+    const auto target_resistance_factor = (target_traversed_in_reverse ? target_node.reverse_resistance_factor : target_node.forward_resistance_factor);
 
     auto distance = std::accumulate(
         leg_geometry.segment_distances.begin(), leg_geometry.segment_distances.end(), 0.);
@@ -142,9 +143,14 @@ inline RouteLeg assembleLeg(const datafacade::BaseDataFacade &facade,
         route_data.begin(), route_data.end(), 0, [](const double sum, const PathData &data) {
             return sum + data.duration_until_turn;
         });
-	auto consumption = std::accumulate(
+	double driving_factor = std::accumulate(
 			route_data.begin(), route_data.end(), 0, [](const int sum, const PathData &data) {
-				return sum + data.consumption_until_turn;
+				return sum + data.driving_factor_until_turn;
+			});
+
+	double resistance_factor = std::accumulate(
+			route_data.begin(), route_data.end(), 0, [](const int sum, const PathData &data) {
+				return sum + data.resistance_factor_until_turn;
 			});
 
 	auto weight = std::accumulate(
@@ -175,23 +181,28 @@ inline RouteLeg assembleLeg(const datafacade::BaseDataFacade &facade,
 
     duration = duration + target_duration;
     weight = weight + target_weight;
-	consumption = consumption + target_consumption;
-    if (route_data.empty())
+	driving_factor += target_driving_factor;
+	resistance_factor += target_resistance_factor;
+	if (route_data.empty())
     {
 		if (target_traversed_in_reverse) {
 			weight -= source_node.reverse_weight;
 			duration -= source_node.reverse_duration;
-			consumption -= source_node.reverse_consumption;
+			driving_factor -= source_node.reverse_driving_factor;
+			resistance_factor -= source_node.reverse_resistance_factor;
 		} else {
 			weight -= source_node.forward_weight;
 			duration -= source_node.forward_duration;
-			consumption -= source_node.forward_consumption;
+			driving_factor -= source_node.forward_driving_factor;
+			resistance_factor -= source_node.forward_resistance_factor;
 		}
 
         // use rectified linear unit function to avoid negative duration values
         // due to flooring errors in phantom snapping
         duration = std::max(0, duration);
-		consumption = std::max(0, consumption);
+		if (driving_factor < 0) {
+			util::Log(logERROR) << "driving factor is < 0: " << driving_factor;
+		}
     }
 
     std::string summary;
@@ -225,7 +236,8 @@ inline RouteLeg assembleLeg(const datafacade::BaseDataFacade &facade,
 
     return RouteLeg{std::round(distance * 10.) / 10.,
                     duration / 10.,
-                    consumption,
+					driving_factor,
+					resistance_factor,
                     weight / facade.GetWeightMultiplier(),
                     summary,
                     {}};

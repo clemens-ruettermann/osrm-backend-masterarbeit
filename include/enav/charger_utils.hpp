@@ -15,8 +15,13 @@
 namespace osrm {
 namespace enav {
 
-inline EdgeDuration calculate_charging_time(const EdgeConsumption consumption_in_milli_wh, const std::uint32_t max_power) {
+inline EdgeDuration calculate_charging_time(const std::int32_t consumption_in_milli_wh, const std::uint32_t max_power) {
 	 return static_cast<EdgeDuration>(((double)consumption_in_milli_wh / (double)max_power) * 3600.0);
+}
+
+inline EdgeDuration calculate_charging_time(const EdgeDrivingFactor driving_factor, const EdgeResistanceFactor resistance_factor, const double max_power, const double wltp, const double weight) {
+	const double consumption = driving_factor * wltp + resistance_factor * weight;
+	return static_cast<EdgeDuration>((consumption / max_power) * 3600.0);
 }
 
 inline std::uint32_t temperature_dependent_capacity(const std::uint32_t base_capacity_milli_wh, const double temperature) {

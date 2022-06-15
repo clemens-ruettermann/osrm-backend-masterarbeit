@@ -94,13 +94,7 @@ SegmentDuration CompressedEdgeContainer::ClipDuration(const SegmentDuration dura
     return duration;
 }
 
-SegmentConsumption CompressedEdgeContainer::ClipConsumption(const SegmentConsumption consumption) {
-	if (consumption >= INVALID_EDGE_CONSUMPTION) {
-		clipped_consumption++;
-		return MAX_SEGMENT_CONSUMPTION;
-	}
-	return consumption;
-}
+
 
 // Adds info for a compressed edge to the container.   edge_id_2
 // has been removed from the graph, so we have to save These edges/nodes
@@ -120,8 +114,10 @@ void CompressedEdgeContainer::CompressEdge(const EdgeID edge_id_1,
                                            const EdgeWeight weight2,
                                            const EdgeDuration duration1,
                                            const EdgeDuration duration2,
-										   const EdgeConsumption consumption1,
-										   const EdgeConsumption consumption2,
+										   const EdgeDrivingFactor driving_factor1,
+										   const EdgeDrivingFactor driving_factor2,
+										   const EdgeResistanceFactor resistance_factor1,
+										   const EdgeResistanceFactor resistance_factor2,
                                            const EdgeWeight node_weight_penalty,
                                            const EdgeDuration node_duration_penalty)
 {
@@ -132,8 +128,10 @@ void CompressedEdgeContainer::CompressEdge(const EdgeID edge_id_1,
     BOOST_ASSERT(SPECIAL_NODEID != target_node_id);
     BOOST_ASSERT(INVALID_SEGMENT_WEIGHT != weight1);
     BOOST_ASSERT(INVALID_SEGMENT_WEIGHT != weight2);
-	BOOST_ASSERT(INVALID_SEGMENT_CONSUMPTION != consumption1);
-	BOOST_ASSERT(INVALID_SEGMENT_CONSUMPTION != consumption2);
+	BOOST_ASSERT(INVALID_EDGE_DRIVING_FACTOR != driving_factor1);
+	BOOST_ASSERT(INVALID_EDGE_DRIVING_FACTOR != driving_factor2);
+	BOOST_ASSERT(INVALID_EDGE_RESISTANCE_FACTOR != resistance_factor1);
+	BOOST_ASSERT(INVALID_EDGE_RESISTANCE_FACTOR != resistance_factor2);
 
     // append list of removed edge_id plus via node to surviving edge id:
     // <surv_1, .. , surv_n, via_node_id, rem_1, .. rem_n
@@ -176,7 +174,8 @@ void CompressedEdgeContainer::CompressEdge(const EdgeID edge_id_1,
 				via_node_id,
 				ClipWeight(weight1),
 				ClipDuration(duration1),
-				ClipConsumption(consumption1)
+				driving_factor1,
+				resistance_factor1
 			});
     }
 
@@ -190,11 +189,8 @@ void CompressedEdgeContainer::CompressEdge(const EdgeID edge_id_1,
             via_node_id,
 			ClipWeight(node_weight_penalty),
 			ClipDuration(node_duration_penalty),
-#ifdef NON_ZERO_CONSUMPTION
-			ClipConsumption(0)
-#else
-            ClipConsumption(1)
-#endif
+			0,
+			0
 		});
     }
 
@@ -222,7 +218,7 @@ void CompressedEdgeContainer::CompressEdge(const EdgeID edge_id_1,
     {
         // we are certain that the second edge is atomic.
         edge_bucket_list1.emplace_back(
-            OnewayCompressedEdge{target_node_id, ClipWeight(weight2), ClipDuration(duration2), ClipConsumption(consumption2)});
+            OnewayCompressedEdge{target_node_id, ClipWeight(weight2), ClipDuration(duration2), driving_factor2, resistance_factor2});
     }
 }
 
@@ -230,17 +226,16 @@ void CompressedEdgeContainer::AddUncompressedEdge(const EdgeID edge_id,
                                                   const NodeID target_node_id,
                                                   const SegmentWeight weight,
                                                   const SegmentDuration duration,
-												  const SegmentConsumption consumption)
+												  const SegmentDrivingFactor driving_factor,
+												  const SegmentResistanceFactor resistance_factor)
 {
     // remove super-trivial geometries
     BOOST_ASSERT(SPECIAL_EDGEID != edge_id);
     BOOST_ASSERT(SPECIAL_NODEID != target_node_id);
     BOOST_ASSERT(INVALID_EDGE_WEIGHT != weight);
-#ifdef NON_ZERO_CONSUMPTION
-	BOOST_ASSERT(INVALID_EDGE_CONSUMPTION != consumption && 0 != consumption);
-#else
-	BOOST_ASSERT(INVALID_EDGE_CONSUMPTION != consumption);
-#endif
+	BOOST_ASSERT(INVALID_EDGE_DRIVING_FACTOR != driving_factor);
+	BOOST_ASSERT(INVALID_EDGE_RESISTANCE_FACTOR != resistance_factor);
+
 
     // Add via node id. List is created if it does not exist
     if (!HasEntryForID(edge_id))
@@ -271,7 +266,7 @@ void CompressedEdgeContainer::AddUncompressedEdge(const EdgeID edge_id,
     if (edge_bucket_list.empty())
     {
         edge_bucket_list.emplace_back(
-            OnewayCompressedEdge{target_node_id, ClipWeight(weight), ClipDuration(duration), ClipConsumption(consumption)});
+            OnewayCompressedEdge{target_node_id, ClipWeight(weight), ClipDuration(duration), driving_factor, resistance_factor});
     }
 }
 
@@ -284,8 +279,10 @@ void CompressedEdgeContainer::InitializeBothwayVector()
     segment_data->rev_weights.reserve(m_compressed_oneway_geometries.size());
     segment_data->fwd_durations.reserve(m_compressed_oneway_geometries.size());
     segment_data->rev_durations.reserve(m_compressed_oneway_geometries.size());
-	segment_data->fwd_consumptions.reserve(m_compressed_oneway_geometries.size());
-	segment_data->rev_consumptions.reserve(m_compressed_oneway_geometries.size());
+	segment_data->fwd_driving_factors.reserve(m_compressed_oneway_geometries.size());
+	segment_data->rev_driving_factors.reserve(m_compressed_oneway_geometries.size());
+	segment_data->fwd_resistance_factors.reserve(m_compressed_oneway_geometries.size());
+	segment_data->rev_resistance_factors.reserve(m_compressed_oneway_geometries.size());
     segment_data->fwd_datasources.reserve(m_compressed_oneway_geometries.size());
     segment_data->rev_datasources.reserve(m_compressed_oneway_geometries.size());
 }
@@ -315,9 +312,12 @@ unsigned CompressedEdgeContainer::ZipEdges(const EdgeID f_edge_id, const EdgeID 
     segment_data->rev_weights.emplace_back(first_node.weight);
     segment_data->fwd_durations.emplace_back(INVALID_SEGMENT_DURATION);
     segment_data->rev_durations.emplace_back(first_node.duration);
-	segment_data->fwd_consumptions.emplace_back(INVALID_SEGMENT_CONSUMPTION);
-	segment_data->rev_consumptions.emplace_back(first_node.consumption);
-    segment_data->fwd_datasources.emplace_back(LUA_SOURCE);
+	segment_data->fwd_driving_factors.emplace_back(0);
+	segment_data->rev_driving_factors.emplace_back(first_node.driving_factor);
+	segment_data->fwd_resistance_factors.emplace_back(0);
+	segment_data->rev_resistance_factors.emplace_back(first_node.resistance_factor);
+
+	segment_data->fwd_datasources.emplace_back(LUA_SOURCE);
     segment_data->rev_datasources.emplace_back(LUA_SOURCE);
 
     for (std::size_t i = 0; i < forward_bucket.size() - 1; ++i)
@@ -332,8 +332,10 @@ unsigned CompressedEdgeContainer::ZipEdges(const EdgeID f_edge_id, const EdgeID 
         segment_data->rev_weights.emplace_back(rev_node.weight);
         segment_data->fwd_durations.emplace_back(fwd_node.duration);
         segment_data->rev_durations.emplace_back(rev_node.duration);
-		segment_data->fwd_consumptions.emplace_back(fwd_node.consumption);
-		segment_data->rev_consumptions.emplace_back(rev_node.consumption);
+		segment_data->fwd_driving_factors.emplace_back(fwd_node.driving_factor);
+		segment_data->rev_driving_factors.emplace_back(fwd_node.driving_factor);
+		segment_data->fwd_resistance_factors.emplace_back(fwd_node.resistance_factor);
+		segment_data->rev_resistance_factors.emplace_back(rev_node.resistance_factor);
         segment_data->fwd_datasources.emplace_back(LUA_SOURCE);
         segment_data->rev_datasources.emplace_back(LUA_SOURCE);
     }
@@ -345,8 +347,11 @@ unsigned CompressedEdgeContainer::ZipEdges(const EdgeID f_edge_id, const EdgeID 
     segment_data->rev_weights.emplace_back(INVALID_SEGMENT_WEIGHT);
     segment_data->fwd_durations.emplace_back(last_node.duration);
     segment_data->rev_durations.emplace_back(INVALID_SEGMENT_DURATION);
-	segment_data->fwd_consumptions.emplace_back(last_node.consumption);
-	segment_data->rev_consumptions.emplace_back(INVALID_SEGMENT_CONSUMPTION);
+	segment_data->fwd_driving_factors.emplace_back(last_node.driving_factor);
+	segment_data->rev_driving_factors.emplace_back(INVALID_EDGE_DRIVING_FACTOR);
+	segment_data->fwd_resistance_factors.emplace_back(last_node.resistance_factor);
+	segment_data->rev_resistance_factors.emplace_back(INVALID_EDGE_RESISTANCE_FACTOR);
+
 	segment_data->fwd_datasources.emplace_back(LUA_SOURCE);
     segment_data->rev_datasources.emplace_back(LUA_SOURCE);
 
@@ -377,9 +382,6 @@ void CompressedEdgeContainer::PrintStatistics() const
         util::Log(logWARNING) << "Clipped " << clipped_durations << " segment durations to "
                               << (INVALID_SEGMENT_DURATION - 1);
     }
-	if (clipped_consumption > 0) {
-		util::Log(logWARNING) << "Clipped " << clipped_consumption << " segment consumptions to " << (INVALID_SEGMENT_CONSUMPTION - 1);
-	}
 
     util::Log() << "Geometry successfully removed:"
                    "\n  compressed edges: "

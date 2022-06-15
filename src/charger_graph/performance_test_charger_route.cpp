@@ -50,8 +50,11 @@ void performance_test_along(
 			const auto & it = test_point_pairs[i];
 			auto start = std::chrono::high_resolution_clock::now();
 			engine::api::EVRouteParameters parameters;
-			parameters.lower_capacity_limit_percent = 0;
-			parameters.upper_capacity_limit_percent = 100;
+			parameters.wltp = 15.8;
+			parameters.weight = 2000;
+			parameters.battery_capacity = 58000000;
+			parameters.lower_capacity_limit = 0;
+			parameters.upper_capacity_limit = parameters.battery_capacity;
 			parameters.start = it.first;
 			parameters.end = it.second;
 			parameters.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::OSRM;
@@ -91,8 +94,12 @@ void performance_test_dijkstra_along(
 			const auto & it = test_point_pairs[i];
 			auto start = std::chrono::high_resolution_clock::now();
 			engine::api::EVRouteParameters parameters;
-			parameters.lower_capacity_limit_percent = lower_limit_percent;
-			parameters.upper_capacity_limit_percent = upper_limit_percent;
+
+			parameters.wltp = 15.8;
+			parameters.weight = 2000;
+			parameters.battery_capacity = 58000000;
+			parameters.lower_capacity_limit = parameters.battery_capacity * lower_limit_percent;
+			parameters.upper_capacity_limit = parameters.battery_capacity * upper_limit_percent;
 			parameters.start = it.first;
 			parameters.end = it.second;
 			parameters.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::OSRM;
@@ -133,8 +140,12 @@ void performance_test_dijkstra(
 			const auto & it = test_point_pairs[i];
 			auto start = std::chrono::high_resolution_clock::now();
 			engine::api::EVRouteParameters parameters;
-			parameters.lower_capacity_limit_percent = lower_limit_percent;
-			parameters.upper_capacity_limit_percent = upper_limit_percent;
+
+			parameters.wltp = 15.8;
+			parameters.weight = 2000;
+			parameters.battery_capacity = 58000000;
+			parameters.lower_capacity_limit = parameters.battery_capacity * lower_limit_percent;
+			parameters.upper_capacity_limit = parameters.battery_capacity * upper_limit_percent;
 			parameters.start = it.first;
 			parameters.end = it.second;
 			parameters.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::OSRM;
@@ -308,15 +319,22 @@ void check_grade_of_result_all_options(
 		auto & it = test_point_pairs[i];
 
 		engine::api::EVRouteParameters parameters_sub;
-		parameters_sub.lower_capacity_limit_percent = 60;
-		parameters_sub.upper_capacity_limit_percent = 90;
+		parameters_sub.wltp = 15.8;
+		parameters_sub.weight = 2000;
+		parameters_sub.battery_capacity = 58000000;
+		parameters_sub.lower_capacity_limit = parameters_sub.battery_capacity * 0.6;
+		parameters_sub.upper_capacity_limit = parameters_sub.battery_capacity * 0.9;
+
 		parameters_sub.start = it.first;
 		parameters_sub.end = it.second;
 		parameters_sub.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::IP_FRONTEND;
 
 		engine::api::EVRouteParameters parameters_full;
-		parameters_full.lower_capacity_limit_percent = 0;
-		parameters_full.upper_capacity_limit_percent = 100;
+		parameters_full.wltp = 15.8;
+		parameters_full.weight = 2000;
+		parameters_full.battery_capacity = 58000000;
+		parameters_full.lower_capacity_limit = 0;
+		parameters_full.upper_capacity_limit = parameters_full.battery_capacity;
 		parameters_full.start = it.first;
 		parameters_full.end = it.second;
 		parameters_full.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::IP_FRONTEND;

@@ -96,6 +96,21 @@ double calculate_milli_watt_h_consumption(
 }
 
 
+std::pair<double, double> calculate_consumption_factors(const double & traveled_distance, const double & avg_speed, const double & height) {
+	double gradient = std::asin(height / traveled_distance);
+	double luftlinie = std::cos(gradient) * traveled_distance;
+	double surface_coefficient = ASPHALT_ROLLING_COEFFICIENT;
+
+	auto driving_factor = get_wltp_factor(avg_speed) * 10.0 * traveled_distance;
+
+	double resistance_factor;
+	if (height >= 0) {
+		resistance_factor = (GRAVITY * (surface_coefficient * std::cos(gradient) * luftlinie + height)) / 3.6;
+	} else {
+		resistance_factor = (GRAVITY * (surface_coefficient * std::cos(gradient) * luftlinie + height * 0.7)) / 3.6;
+	}
+	return std::make_pair(driving_factor, resistance_factor);
+}
 
 
 }

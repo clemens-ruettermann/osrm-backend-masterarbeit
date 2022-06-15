@@ -234,7 +234,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
     std::vector<EdgeWeight> edge_based_node_weights;
     std::vector<EdgeDuration> edge_based_node_durations;
     std::vector<EdgeDistance> edge_based_node_distances;
-    std::vector<EdgeConsumption> edge_based_node_consumptions;
+    std::vector<EdgeDrivingFactor> edge_based_node_driving_factors;
+    std::vector<EdgeResistanceFactor> edge_based_node_resistance_factors;
 
     std::uint32_t ebg_connectivity_checksum = 0;
 
@@ -304,7 +305,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                                edge_based_node_weights,
                                edge_based_node_durations,
                                edge_based_node_distances,
-                               edge_based_node_consumptions,
+                               edge_based_node_driving_factors,
+							   edge_based_node_resistance_factors,
                                edge_based_edge_list,
                                ebg_connectivity_checksum);
 
@@ -331,7 +333,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 		                                                                          edge_based_node_weights,
 		                                                                          edge_based_node_durations,
 		                                                                          edge_based_node_distances,
-		                                                                          edge_based_node_consumptions);
+		                                                                          edge_based_node_driving_factors,
+																				  edge_based_node_resistance_factors);
     TIMER_STOP(timer_write_node_weights);
     util::Log() << "Done writing. (" << TIMER_SEC(timer_write_node_weights) << ")";
 
@@ -730,7 +733,8 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     std::vector<EdgeWeight> &edge_based_node_weights,
     std::vector<EdgeDuration> &edge_based_node_durations,
     std::vector<EdgeDistance> &edge_based_node_distances,
-    std::vector<EdgeConsumption> &edge_based_node_consumptions,
+    std::vector<EdgeDrivingFactor> &edge_based_node_driving_factors,
+    std::vector<EdgeResistanceFactor> &edge_based_node_resistance_factors,
     util::DeallocatingVector<EdgeBasedEdge> &edge_based_edge_list,
     std::uint32_t &connectivity_checksum)
 {
@@ -770,7 +774,8 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     edge_based_graph_factory.GetEdgeBasedNodeWeights(edge_based_node_weights);
     edge_based_graph_factory.GetEdgeBasedNodeDurations(edge_based_node_durations);
     edge_based_graph_factory.GetEdgeBasedNodeDistances(edge_based_node_distances);
-	edge_based_graph_factory.GetEdgeBasedNodeCosumptions(edge_based_node_consumptions);
+	edge_based_graph_factory.GetEdgeBasedNodeDrivingFactors(edge_based_node_driving_factors);
+	edge_based_graph_factory.GetEdgeBasedNodeResistanceFactors(edge_based_node_resistance_factors);
     connectivity_checksum = edge_based_graph_factory.GetConnectivityChecksum();
 
     return number_of_edge_based_nodes;

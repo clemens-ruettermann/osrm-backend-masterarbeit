@@ -245,7 +245,8 @@ void ChargerGraphBuilder::compressClusters() {
 void ChargerGraphBuilder::buildChargerGraph(const double lower_limit_percent, const double upper_limit_percent) {
 	BOOST_ASSERT(!chargers.empty());
 
-	std::vector<EdgeConsumption> consumptions;
+	std::vector<EdgeDrivingFactor> driving_factors;
+	std::vector<EdgeResistanceFactor> resistance_factors;
 	std::vector<EdgeWeight> weights;
 	std::vector<EdgeDistance> distance;
 
@@ -265,7 +266,13 @@ void ChargerGraphBuilder::buildChargerGraph(const double lower_limit_percent, co
 		TIMER_STOP(TMP);
 		util::Log() << "Calculating the many-to-many request took " << TIMER_SEC(TMP);
 
-		consumptions = std::get<2>(result);
+		auto consumption_factor_pairs = std::get<2>(result);
+		driving_factors.reserve(consumption_factor_pairs.size());
+		resistance_factors.reserve(consumption_factor_pairs.size());
+		for (const auto & it : consumption_factor_pairs) {
+			driving_factors.push_back(it.first);
+			resistance_factors.push_back(it.second);
+		}
 		weights = std::get<3>(result);
 	}
 
@@ -283,19 +290,15 @@ void ChargerGraphBuilder::buildChargerGraph(const double lower_limit_percent, co
 			for (size_t j = 0; j < chargers_size; j++) {
 				if (i != j) {
 					auto vec_index = i * chargers_size + j;
-					auto tmp_consumption = consumptions[vec_index];
-					if (tmp_consumption == INVALID_EDGE_CONSUMPTION) {
+					if (weights[vec_index] == INVALID_EDGE_WEIGHT) {
 						skipped_edges++;
 						continue;
 					}
 
-					// We only allow Edges with a positive consumption as it would just add redundancy
-					if (tmp_consumption >= lower_capacity_limit && tmp_consumption <= upper_capacity_limit) {
-						BOOST_ASSERT(chargers[j].node_id == j);
-						edges.emplace_back(tmp_start_charger_id, chargers[j].node_id, weights[vec_index], tmp_consumption);
-					} else {
-						skipped_edges++;
-					}
+					// No check for the consumption will be done here as it is not possible to determine the real consumption
+
+					BOOST_ASSERT(chargers[j].node_id == j);
+					edges.emplace_back(tmp_start_charger_id, chargers[j].node_id, weights[vec_index], driving_factors[vec_index], resistance_factors[vec_index]);
 				}
 			}
 		}
@@ -330,6 +333,7 @@ void ChargerGraphBuilder::Run() {
 	TIMER_STOP(GLOBAL);
 	util::Log() << "This took " << TIMER_SEC(GLOBAL) << "s in total";
 }
+
 
 
 ChargerGraphBuilder::ChargerGraphBuilder(std::vector<Charger> chargers, const unsigned int cluster_size, const double epsilon) : chargers(std::move(chargers)), min_cluster_size(cluster_size), min_epsilon(epsilon) {

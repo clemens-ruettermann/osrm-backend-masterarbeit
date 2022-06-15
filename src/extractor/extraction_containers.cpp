@@ -520,32 +520,14 @@ void ExtractionContainers::WriteEdges(storage::tar::FileWriter &writer) const
 
 				if (edge.distance > 0) {
 					const auto slope = target_elevation - source_elevation;
-					double double_consumption = osrm::util::enav::calculate_milli_watt_h_consumption(car, accurate_distance, edge_iterator->speed, slope);
-					std::int32_t rounded_consumption = std::lround(double_consumption);
-					BOOST_ASSERT(rounded_consumption != std::numeric_limits<std::int32_t>::max());
-					BOOST_ASSERT(rounded_consumption != std::numeric_limits<std::int32_t>::min());
-
-#ifdef NON_ZERO_CONSUMPTION
-					// As 0 is a special value we force the edges to never be 0
-					if (rounded_consumption != 0) {
-						edge.consumption = rounded_consumption;
-					} else {
-						edge.consumption = 1;
-					}
-#else
-					edge.consumption = rounded_consumption;
-#endif
+					auto consumption_factors = osrm::util::enav::calculate_consumption_factors(accurate_distance, edge_iterator->speed, slope);
+					edge.driving_factor  = consumption_factors.first;
+					edge.resistance_factor = consumption_factors.second;
 				} else {
-#ifdef NON_ZERO_CONSUMPTION
-					edge.consumption = 1;
-#else
-					edge.consumption = 0;
-#endif
+					edge.driving_factor = 0;
+					edge.resistance_factor = 0;
 				}
 
-#ifdef NON_ZERO_CONSUMPTION
-				BOOST_ASSERT(edge.consumption != 0);
-#endif
 
 				// assign new node id
 				const auto node_id = mapExternalToInternalNodeID(

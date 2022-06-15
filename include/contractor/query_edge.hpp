@@ -17,7 +17,7 @@ struct QueryEdge
     struct EdgeData
     {
         explicit EdgeData()
-            : turn_id(0), shortcut(false), weight(0), duration(0), consumption(0), forward(false), backward(false),
+            : turn_id(0), shortcut(false), weight(0), duration(0), driving_factor(0), resistance_factor(0), forward(false), backward(false),
               distance(0)
         {
         }
@@ -27,10 +27,11 @@ struct QueryEdge
                  const EdgeWeight weight,
                  const EdgeDuration duration,
                  const EdgeDistance distance,
-				 const EdgeConsumption consumption,
+				 const EdgeDrivingFactor driving_factor,
+				 const EdgeResistanceFactor resistance_factor,
                  const bool forward,
                  const bool backward)
-            : turn_id(turn_id), shortcut(shortcut), weight(weight), duration(duration), consumption(consumption),
+            : turn_id(turn_id), shortcut(shortcut), weight(weight), duration(duration), driving_factor(driving_factor), resistance_factor(resistance_factor),
               forward(forward), backward(backward), distance(distance)
         {
         }
@@ -44,7 +45,8 @@ struct QueryEdge
             forward = other.forward;
             backward = other.backward;
             distance = other.distance;
-			consumption = other.consumption;
+			driving_factor = other.driving_factor;
+	        resistance_factor = other.resistance_factor;
         }
         // this ID is either the middle node of the shortcut, or the ID of the edge based node (node
         // based edge) storing the appropriate data. If `shortcut` is set to true, we get the middle
@@ -56,7 +58,8 @@ struct QueryEdge
         std::uint32_t forward : 1;
         std::uint32_t backward : 1;
         EdgeDistance distance;
-	    EdgeConsumption consumption;
+	    EdgeDrivingFactor driving_factor;
+	    EdgeResistanceFactor resistance_factor;
     } data;
 
     QueryEdge() : source(SPECIAL_NODEID), target(SPECIAL_NODEID) {}
@@ -77,7 +80,7 @@ struct QueryEdge
                 data.weight == right.data.weight && data.duration == right.data.duration &&
                 data.shortcut == right.data.shortcut && data.forward == right.data.forward &&
                 data.backward == right.data.backward && data.turn_id == right.data.turn_id &&
-                data.distance == right.data.distance && data.consumption == right.data.consumption);
+                data.distance == right.data.distance && data.driving_factor == right.data.driving_factor && data.resistance_factor == right.data.resistance_factor);
     }
 };
 } // namespace contractor

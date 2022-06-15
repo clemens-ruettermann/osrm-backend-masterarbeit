@@ -88,7 +88,8 @@ void insertSourceInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     {phantom_node.forward_segment_id.id,
                      -phantom_node.GetForwardDuration(),
                      -phantom_node.GetForwardDistance(),
-					 -phantom_node.GetForwardConsumption()});
+					 -phantom_node.GetForwardDrivingFactor(),
+					 -phantom_node.GetForwardResistanceFactor()});
     }
     if (phantom_node.IsValidReverseSource())
     {
@@ -97,7 +98,8 @@ void insertSourceInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     {phantom_node.reverse_segment_id.id,
                      -phantom_node.GetReverseDuration(),
                      -phantom_node.GetReverseDistance(),
-					 -phantom_node.GetReverseConsumption()});
+					 -phantom_node.GetReverseDrivingFactor(),
+					 -phantom_node.GetReverseResistanceFactor()});
     }
 }
 
@@ -111,7 +113,8 @@ void insertTargetInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     {phantom_node.forward_segment_id.id,
                      phantom_node.GetForwardDuration(),
                      phantom_node.GetForwardDistance(),
-					 phantom_node.GetForwardConsumption()});
+                     phantom_node.GetForwardDrivingFactor(),
+					 phantom_node.GetForwardResistanceFactor()});
     }
     if (phantom_node.IsValidReverseTarget())
     {
@@ -120,7 +123,8 @@ void insertTargetInHeap(ManyToManyQueryHeap &heap, const PhantomNode &phantom_no
                     {phantom_node.reverse_segment_id.id,
                      phantom_node.GetReverseDuration(),
                      phantom_node.GetReverseDistance(),
-					 phantom_node.GetReverseConsumption()});
+                     phantom_node.GetReverseDrivingFactor(),
+					 phantom_node.GetReverseResistanceFactor()});
     }
 }
 
@@ -148,7 +152,8 @@ void annotatePath(const FacadeT &facade,
     std::vector<NodeID> id_vector;
     std::vector<SegmentWeight> weight_vector;
     std::vector<SegmentDuration> duration_vector;
-    std::vector<SegmentConsumption> consumption_vector;
+    std::vector<SegmentDrivingFactor> driving_factor_vector;
+    std::vector<SegmentResistanceFactor> resistance_factor_vector;
     std::vector<DatasourceID> datasource_vector;
 
     const auto get_segment_geometry = [&](const auto geometry_index) {
@@ -162,7 +167,8 @@ void annotatePath(const FacadeT &facade,
             copy(id_vector, facade.GetUncompressedForwardGeometry(geometry_index.id));
             copy(weight_vector, facade.GetUncompressedForwardWeights(geometry_index.id));
             copy(duration_vector, facade.GetUncompressedForwardDurations(geometry_index.id));
-			copy(consumption_vector, facade.GetUncompressedForwardConsumptions(geometry_index.id));
+			copy(driving_factor_vector, facade.GetUncompressedForwardDrivingFactors(geometry_index.id));
+			copy(resistance_factor_vector, facade.GetUncompressedForwardResistanceFactors(geometry_index.id));
             copy(datasource_vector, facade.GetUncompressedForwardDatasources(geometry_index.id));
         }
         else
@@ -170,7 +176,8 @@ void annotatePath(const FacadeT &facade,
             copy(id_vector, facade.GetUncompressedReverseGeometry(geometry_index.id));
             copy(weight_vector, facade.GetUncompressedReverseWeights(geometry_index.id));
             copy(duration_vector, facade.GetUncompressedReverseDurations(geometry_index.id));
-	        copy(consumption_vector, facade.GetUncompressedReverseConsumptions(geometry_index.id));
+	        copy(driving_factor_vector, facade.GetUncompressedReverseDrivingFactors(geometry_index.id));
+	        copy(resistance_factor_vector, facade.GetUncompressedReverseResistanceFactors(geometry_index.id));
             copy(datasource_vector, facade.GetUncompressedReverseDatasources(geometry_index.id));
         }
     };
@@ -194,7 +201,9 @@ void annotatePath(const FacadeT &facade,
         BOOST_ASSERT(!datasource_vector.empty());
         BOOST_ASSERT(weight_vector.size() + 1 == id_vector.size());
         BOOST_ASSERT(duration_vector.size() + 1 == id_vector.size());
-        BOOST_ASSERT(consumption_vector.size() + 1 == id_vector.size());
+
+        BOOST_ASSERT(driving_factor_vector.size() + 1 == id_vector.size());
+        BOOST_ASSERT(resistance_factor_vector.size() + 1 == id_vector.size());
 
 
         const bool is_first_segment = unpacked_path.empty();
@@ -226,7 +235,8 @@ void annotatePath(const FacadeT &facade,
                          0,
                          static_cast<EdgeDuration>(duration_vector[segment_idx]),
                          0,
-						 static_cast<EdgeConsumption>(consumption_vector[segment_idx]),
+						 static_cast<EdgeDrivingFactor>(driving_factor_vector[segment_idx]),
+						 static_cast<EdgeResistanceFactor>(resistance_factor_vector[segment_idx]),
                          guidance::TurnInstruction::NO_TURN(),
                          osrm::util::guidance::LaneTupleIdPair{osrm::util::guidance::LaneTuple{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                          travel_mode,
@@ -296,7 +306,8 @@ void annotatePath(const FacadeT &facade,
                      0,
                      static_cast<EdgeDuration>(duration_vector[segment_idx]),
                      0,
-					 static_cast<EdgeConsumption>(consumption_vector[segment_idx]),
+					 static_cast<EdgeDrivingFactor>(driving_factor_vector[segment_idx]),
+					 static_cast<EdgeResistanceFactor>(resistance_factor_vector[segment_idx]),
                      guidance::TurnInstruction::NO_TURN(),
                      osrm::util::guidance::LaneTupleIdPair{osrm::util::guidance::LaneTuple{0, INVALID_LANEID}, INVALID_LANE_DESCRIPTIONID},
                      facade.GetTravelMode(target_node_id),
@@ -316,9 +327,14 @@ void annotatePath(const FacadeT &facade,
         const auto source_duration = start_traversed_in_reverse
                                          ? phantom_node_pair.source_phantom.reverse_duration
                                          : phantom_node_pair.source_phantom.forward_duration;
-		const auto source_consumption = start_traversed_in_reverse
-										? phantom_node_pair.source_phantom.reverse_consumption
-										: phantom_node_pair.source_phantom.forward_consumption;
+		const auto source_driving_factor = start_traversed_in_reverse
+										? phantom_node_pair.source_phantom.reverse_driving_factor
+										: phantom_node_pair.source_phantom.forward_driving_factor;
+
+	    const auto source_resistance_factor = start_traversed_in_reverse
+	                                    ? phantom_node_pair.source_phantom.reverse_resistance_factor
+	                                    : phantom_node_pair.source_phantom.forward_resistance_factor;
+
         // The above code will create segments for (v, w), (w,x), (x, y) and (y, Z).
         // However the first segment duration needs to be adjusted to the fact that the source
         // phantom is in the middle of the segment. We do this by subtracting v--s from the
@@ -334,7 +350,8 @@ void annotatePath(const FacadeT &facade,
         // which is obviously incorrect and not ideal...
         unpacked_path.front().weight_until_turn = std::max(unpacked_path.front().weight_until_turn - source_weight, 0);
         unpacked_path.front().duration_until_turn = std::max(unpacked_path.front().duration_until_turn - source_duration, 0);
-		unpacked_path.front().consumption_until_turn = unpacked_path.front().consumption_until_turn - source_consumption;
+		unpacked_path.front().driving_factor_until_turn = unpacked_path.front().driving_factor_until_turn - source_driving_factor;
+		unpacked_path.front().resistance_factor_until_turn = unpacked_path.front().resistance_factor_until_turn - source_resistance_factor;
     }
 }
 

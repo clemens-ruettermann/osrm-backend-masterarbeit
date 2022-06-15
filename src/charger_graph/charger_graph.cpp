@@ -80,10 +80,11 @@ std::vector<ChargerId> buildPathFromPrev(const std::vector<ChargerId> & prev, co
 
 
 
-ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNode> & starts, const std::vector<ReachableEndNode> & ends) const {
+ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNode> & starts, const std::vector<ReachableEndNode> & ends, const double wltp, const double car_weight) const {
 	std::vector<ChargerId> best_path;
 	EdgeWeight best_weight = INVALID_EDGE_WEIGHT;
-	RouteConsumption best_consumption = INVALID_ROUTE_CONSUMPTION;
+	EdgeDrivingFactor best_driving_factor = INVALID_EDGE_DRIVING_FACTOR;
+	EdgeResistanceFactor best_resistance_factor = INVALID_EDGE_RESISTANCE_FACTOR;
 
 	unsigned long counter = 0;
 	unsigned long number_starts = starts.size();
@@ -92,11 +93,12 @@ ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNo
 	thread_pool pool;
 	std::mutex my_mutex;
 
-	const auto best_route_func = [&my_mutex, &best_path, &best_consumption, &best_weight, &ends, &counter, &number_starts, this] (const ReachableStartNode & start) {
-		auto tree = buildShortestPathTree(start);
+	const auto best_route_func = [&, this] (const ReachableStartNode & start) {
+		auto tree = buildShortestPathTree(start, wltp, car_weight);
 		auto & prev = std::get<0>(tree);
 		auto & weights = std::get<1>(tree);
-		auto & consumptions = std::get<2>(tree);
+		auto & driving_factors = std::get<2>(tree);
+		auto & resistance_factors = std::get<3>(tree);
 		for (auto end : ends) {
 			auto path = buildPathFromPrev(prev, start.id, end.id);
 			if (path.empty()) {
@@ -106,7 +108,8 @@ ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNo
 			std::lock_guard<std::mutex> lg(my_mutex);
 			if (total_weight < best_weight) {
 				best_weight = total_weight;
-				best_consumption = consumptions[end.id] + end.consumption_to_end;
+				best_driving_factor = driving_factors[end.id] + end.driving_factor_to_end;
+				best_resistance_factor = resistance_factors[end.id] + end.resistance_factor_to_end;
 				best_path = path;
 			}
 
@@ -121,7 +124,6 @@ ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNo
 	pool.wait_for_tasks();
 
 #else
-
 	for (const auto & start : starts) {
 		util::Log(logDEBUG) << "Starting dijkstra " << (counter+1);
 		TIMER_START(DIJKSTRA);
@@ -141,34 +143,31 @@ ShortestPathResult ChargerGraph::shortestPath(const std::vector<ReachableStartNo
 				best_path = path;
 			}
 		}
-		if (best_path.empty()) {
-			const auto tree2 = buildShortestPathTree(start);
-		}
 		TIMER_STOP(DIJKSTRA);
 		util::Log(logDEBUG) << (++counter)+1 << "/" << number_starts << "\t this took " << TIMER_SEC(DIJKSTRA) << " sec" ;
 	}
 #endif
 	if (best_path.empty()) {
-//		std::cerr << std::endl << std::endl << "+++++++++++++++++++++++++++" << std::endl << "No Shortest path found" << std::endl<<"+++++++++++++++++++++++++++" << std::endl ;
-
 		return {false};
 	}
-//	std::cerr << std::endl << std::endl << "============================" << std::endl << "Shortest path found" << std::endl<<"============================" << std::endl ;
 
 	std::vector<util::Coordinate> best_path_coords;
 	for (const auto & it : best_path) {
 		best_path_coords.emplace_back(charger_list[it].coordinate);
 	}
-	return ShortestPathResult{best_path_coords, best_path, best_consumption, true};
+	return ShortestPathResult{best_path_coords, best_path, best_driving_factor, best_resistance_factor, true};
 }
 
-std::tuple<std::vector<ChargerId>, std::vector<EdgeWeight>, std::vector<RouteConsumption>> ChargerGraph::buildShortestPathTree(const ReachableStartNode & start) const {
+std::tuple<std::vector<ChargerId>, std::vector<EdgeWeight>, std::vector<EdgeDrivingFactor>, std::vector<EdgeResistanceFactor>>
+ChargerGraph::buildShortestPathTree(const ReachableStartNode & start, const double wltp, const double car_weight) const {
 	std::vector<EdgeWeight> weights(num_chargers, INVALID_EDGE_WEIGHT);
-	std::vector<RouteConsumption> consumptions(num_chargers, INVALID_ROUTE_CONSUMPTION);
+	std::vector<EdgeDrivingFactor> driving_factors;
+	std::vector<EdgeResistanceFactor> resistance_factors;
 	std::vector<ChargerId> prev(num_chargers, INVALID_NODE_ID);
 
 	weights[start.id] = start.weight_to_reach_node;
-	consumptions[start.id] = start.consumption_to_reach_node;
+	driving_factors[start.id] = start.driving_factor_to_reach_node;
+	resistance_factors[start.id] = start.resistance_factor_to_reach_node;
 	prev[start.id] = start.id;
 
 	const auto edges_end = adj_list->cend();
@@ -197,18 +196,16 @@ std::tuple<std::vector<ChargerId>, std::vector<EdgeWeight>, std::vector<RouteCon
 			// We need to calculate how long it would take at the finish to charge
 			// This needs to be added to the charging time of the first charger
 			auto current_end = it->end;
-			auto new_weight = current_weight + it->weight + calculate_charging_time(it->consumption, this->charger_list[current_end].max_power);
+			auto new_weight = current_weight + it->weight + calculate_charging_time(it->driving_factor, it->resistance_factor, this->charger_list[current_end].max_power, wltp, car_weight);
 			if (it->weight != INVALID_EDGE_WEIGHT && new_weight < weights[current_end]) {
 				weights[current_end] = new_weight;
 				prev[current_end] = current_node;
-				consumptions[current_end] = consumptions[current_node] + it->consumption;
+				driving_factors[current_end] = driving_factors[current_node] + it->driving_factor;
+				resistance_factors[current_end] = resistance_factors[current_node] + it->resistance_factor;
 			}
 		}
 	}
-//	if (start.id == 0 && prev[478] != 610) {
-//		std::cout << std::endl;
-//	}
-	return std::make_tuple(std::move(prev), std::move(weights), std::move(consumptions));
+	return std::make_tuple(std::move(prev), std::move(weights), std::move(driving_factors), std::move(resistance_factors));
 }
 
 std::string ChargerGraph::edgesToString() const {

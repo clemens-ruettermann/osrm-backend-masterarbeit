@@ -31,9 +31,10 @@ struct ManyToManyHeapData : HeapData
 {
     EdgeWeight duration;
     EdgeDistance distance;
-	EdgeConsumption consumption;
-    ManyToManyHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeConsumption consumption)
-        : HeapData(p), duration(duration), distance(distance), consumption(consumption)
+	EdgeDrivingFactor driving_factor;
+	EdgeResistanceFactor resistance_factor;
+    ManyToManyHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor)
+        : HeapData(p), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor)
     {
     }
 };
@@ -80,17 +81,19 @@ struct ManyToManyMultiLayerDijkstraHeapData : MultiLayerDijkstraHeapData
 {
     EdgeWeight duration;
     EdgeDistance distance;
-	EdgeConsumption consumption;
-    ManyToManyMultiLayerDijkstraHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeConsumption consumption)
-        : MultiLayerDijkstraHeapData(p), duration(duration), distance(distance), consumption(consumption)
+	EdgeDrivingFactor driving_factor;
+	EdgeResistanceFactor resistance_factor;
+    ManyToManyMultiLayerDijkstraHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeDrivingFactor driving_factor, EdgeResistanceFactor resistance_factor)
+        : MultiLayerDijkstraHeapData(p), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor)
     {
     }
     ManyToManyMultiLayerDijkstraHeapData(NodeID p,
                                          bool from,
                                          EdgeWeight duration,
                                          EdgeDistance distance,
-                                         EdgeConsumption consumption)
-        : MultiLayerDijkstraHeapData(p, from), duration(duration), distance(distance), consumption(consumption)
+                                         EdgeDrivingFactor driving_factor,
+										 EdgeResistanceFactor resistance_factor)
+        : MultiLayerDijkstraHeapData(p, from), duration(duration), distance(distance), driving_factor(driving_factor), resistance_factor(resistance_factor)
     {
     }
 };

@@ -24,11 +24,12 @@ class CompressedEdgeContainer
         NodeID node_id;           // refers to an internal node-based-node
         SegmentWeight weight;     // the weight of the edge leading to this node
         SegmentDuration duration; // the duration of the edge leading to this node
-	    SegmentConsumption consumption;
+		SegmentDrivingFactor driving_factor;
+		SegmentResistanceFactor resistance_factor;
 
     public:
-		OnewayCompressedEdge(const NodeID node_id, SegmentWeight weight, SegmentDuration duration, SegmentConsumption consumption)
-			: node_id(node_id), weight(weight), duration(duration), consumption(consumption) {}
+		OnewayCompressedEdge(const NodeID node_id, SegmentWeight weight, SegmentDuration duration, SegmentDrivingFactor driving_factor, SegmentResistanceFactor resistance_factor)
+			: node_id(node_id), weight(weight), duration(duration), driving_factor(driving_factor), resistance_factor(resistance_factor) {}
     };
 
     using OnewayEdgeBucket = std::vector<OnewayCompressedEdge>;
@@ -42,8 +43,10 @@ class CompressedEdgeContainer
                       const EdgeWeight weight2,
                       const EdgeDuration duration1,
                       const EdgeDuration duration2,
-					  const EdgeConsumption consumption1,
-					  const EdgeConsumption consumption2,
+					  const EdgeDrivingFactor driving_factor1,
+					  const EdgeDrivingFactor driving_factor2,
+					  const EdgeResistanceFactor resistance_factor1,
+					  const EdgeResistanceFactor resistance_factor2,
                       // node-penalties can be added before/or after the traversal of an edge which
                       // depends on whether we traverse the link forwards or backwards.
                       const EdgeWeight node_weight_penalty = INVALID_EDGE_WEIGHT,
@@ -53,7 +56,8 @@ class CompressedEdgeContainer
                              const NodeID target_node,
                              const SegmentWeight weight,
                              const SegmentWeight duration,
-							 const SegmentConsumption consumption);
+							 const SegmentDrivingFactor driving_factor,
+							 const SegmentResistanceFactor resistance_factor);
 
     void InitializeBothwayVector();
     unsigned ZipEdges(const unsigned f_edge_pos, const unsigned r_edge_pos);
@@ -77,7 +81,6 @@ class CompressedEdgeContainer
   private:
     SegmentWeight ClipWeight(const SegmentWeight weight);
     SegmentDuration ClipDuration(const SegmentDuration duration);
-	SegmentConsumption ClipConsumption(const SegmentConsumption consumption);
 
     int free_list_maximum = 0;
     std::atomic_size_t clipped_weights{0};

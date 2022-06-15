@@ -216,47 +216,35 @@ void ContractNode(ContractorThreadData *data,
 						EdgeDuration new_duration = in_data.duration + out_data.duration;
 						EdgeDistance new_distance = in_data.distance + out_data.distance;
 	                    unsigned new_original_edges = out_data.originalEdges + in_data.originalEdges;
-	                    EdgeConsumption new_consumption;
-#ifdef NON_ZERO_CONSUMPTION
-	                    if (in_data.consumption + out_data.consumption != 0) {
-							new_consumption = in_data.consumption + out_data.consumption;
-						} else {
-							BOOST_ASSERT(in_data.consumption != 0 && in_data.consumption != INVALID_EDGE_CONSUMPTION);
-							BOOST_ASSERT(out_data.consumption != 0 && out_data.consumption != INVALID_EDGE_CONSUMPTION);
-							new_consumption = 1;
-						}
-#else
-	                    new_consumption = in_data.consumption + out_data.consumption;
-#endif
+						EdgeDrivingFactor new_driving_factor = in_data.driving_factor + out_data.driving_factor;
+						EdgeResistanceFactor new_resistance_factor = in_data.resistance_factor + out_data.resistance_factor;
 
                         auto new_edge1 = inserted_edges.emplace_back(ContractorEdge{source,
                                                     target,
                                                     path_weight,
 													new_duration,
 													new_distance,
-													new_consumption,
+													new_driving_factor,
+													new_resistance_factor,
 													new_original_edges,
                                                     node,
                                                     SHORTCUT_ARC,
                                                     FORWARD_DIRECTION_ENABLED,
                                                     REVERSE_DIRECTION_DISABLED});
-#ifdef NON_ZERO_CONSUMPTION
-	                    BOOST_ASSERT(new_edge1.data.consumption != 0 && new_edge1.data.consumption != INVALID_EDGE_CONSUMPTION);
-#endif
+
                         auto new_edge2 = inserted_edges.emplace_back(ContractorEdge{target,
                                                     source,
                                                     path_weight,
 													new_duration,
 													new_distance,
-													new_consumption,
+													new_driving_factor,
+													new_resistance_factor,
 													new_original_edges,
                                                     node,
                                                     SHORTCUT_ARC,
                                                     FORWARD_DIRECTION_DISABLED,
                                                     REVERSE_DIRECTION_ENABLED});
-#ifdef NON_ZERO_CONSUMPTION
-	                    BOOST_ASSERT(new_edge2.data.consumption != 0 && new_edge2.data.consumption != INVALID_EDGE_CONSUMPTION);
-#endif
+
                     }
                 }
                 continue;
@@ -305,50 +293,35 @@ void ContractNode(ContractorThreadData *data,
 					EdgeDistance new_distance = in_data.distance + out_data.distance;
 					EdgeDuration new_duration = in_data.duration + out_data.duration;
 					unsigned new_original_edges = out_data.originalEdges + in_data.originalEdges;
-	                EdgeConsumption new_consumption;
-#ifdef NON_ZERO_CONSUMPTION
-	                if (in_data.consumption + out_data.consumption != 0)
-					{
-						new_consumption = in_data.consumption + out_data.consumption;
-					}
-					else
-					{
-						BOOST_ASSERT(in_data.consumption != 0 && in_data.consumption != INVALID_EDGE_CONSUMPTION);
-						BOOST_ASSERT(out_data.consumption != 0 && out_data.consumption != INVALID_EDGE_CONSUMPTION);
-						new_consumption = 1;
-					}
-#else
-	                new_consumption = in_data.consumption + out_data.consumption;
-#endif
+					EdgeDrivingFactor new_driving_factor = in_data.driving_factor + out_data.driving_factor;
+					EdgeResistanceFactor new_resistance_factor = in_data.resistance_factor + out_data.resistance_factor;
                     auto new_edge1 = inserted_edges.emplace_back(ContractorEdge{source,
                                                 target,
                                                 path_weight,
                                                 new_duration,
                                                 new_distance,
-												new_consumption,
+												new_driving_factor,
+												new_resistance_factor,
 												new_original_edges,
                                                 node,
                                                 SHORTCUT_ARC,
                                                 FORWARD_DIRECTION_ENABLED,
                                                 REVERSE_DIRECTION_DISABLED});
 
-#ifdef NON_ZERO_CONSUMPTION
-					BOOST_ASSERT(new_edge1.data.consumption != 0 && new_edge1.data.consumption != INVALID_EDGE_CONSUMPTION);
-#endif
+
                     auto new_edge2 = inserted_edges.emplace_back(ContractorEdge{target,
                                                 source,
                                                 path_weight,
                                                 new_duration,
                                                 new_distance,
-												new_consumption,
+												new_driving_factor,
+												new_resistance_factor,
 												new_original_edges,
                                                 node,
                                                 SHORTCUT_ARC,
                                                 FORWARD_DIRECTION_DISABLED,
                                                 REVERSE_DIRECTION_ENABLED});
-#ifdef NON_ZERO_CONSUMPTION
-	                BOOST_ASSERT(new_edge2.data.consumption != 0 && new_edge2.data.consumption != INVALID_EDGE_CONSUMPTION);
-#endif
+
                 }
             }
         }

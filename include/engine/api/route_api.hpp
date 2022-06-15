@@ -390,7 +390,8 @@ class RouteAPI : public BaseAPI
             fbresult::LegBuilder legBuilder(fb_result);
             legBuilder.add_distance(leg.distance);
             legBuilder.add_duration(leg.duration);
-			legBuilder.add_consumption(leg.consumption);
+			throw std::runtime_error{"Flatbuffers currently not supported"};
+//			legBuilder.add_consumption(leg.consumption);
             legBuilder.add_weight(leg.weight);
             if (!leg.summary.empty())
             {
@@ -421,7 +422,8 @@ class RouteAPI : public BaseAPI
         fbresult::RouteObjectBuilder routeObject(fb_result);
         routeObject.add_distance(route.distance);
         routeObject.add_duration(route.duration);
-		routeObject.add_consumption(route.consumption);
+	    throw std::runtime_error{"Flatbuffers currently not supported"};
+//		routeObject.add_consumption(route.consumption);
         routeObject.add_weight(route.weight);
         routeObject.add_weight_name(weight_name_string);
         routeObject.add_legs(legs_vector);
@@ -489,13 +491,14 @@ class RouteAPI : public BaseAPI
                 });
         }
 
-		flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumption;
-		if (requested_annotations & RouteParameters::AnnotationsType::Consumption) {
-			consumption = GetAnnotations<int32_t>(
-					fb_result, leg_geometry, [] (const guidance::LegGeometry::Annotation &anno) {
-						return anno.consumption;
-					});
-		}
+	    throw std::runtime_error{"Flatbuffers currently not supported"};
+//		flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumption;
+//		if (requested_annotations & RouteParameters::AnnotationsType::Consumption) {
+//			consumption = GetAnnotations<int32_t>(
+//					fb_result, leg_geometry, [] (const guidance::LegGeometry::Annotation &anno) {
+//						return anno.consumption;
+//					});
+//		}
 
         flatbuffers::Offset<flatbuffers::Vector<uint32_t>> datasources;
         if (requested_annotations & RouteParameters::AnnotationsType::Datasources)
@@ -641,7 +644,8 @@ class RouteAPI : public BaseAPI
         fbresult::StepBuilder stepBuilder(builder);
         stepBuilder.add_duration(step.duration);
         stepBuilder.add_distance(step.distance);
-		stepBuilder.add_consumption(step.consumption);
+	    throw std::runtime_error{"Flatbuffers currently not supported"};
+//		stepBuilder.add_consumption(step.consumption);
         stepBuilder.add_weight(step.weight);
         stepBuilder.add_name(name_string);
         stepBuilder.add_mode(mode_string);
@@ -827,12 +831,13 @@ class RouteAPI : public BaseAPI
                         leg_geometry,
                         [](const guidance::LegGeometry::Annotation &anno) { return anno.weight; });
                 }
-	            if (requested_annotations & RouteParameters::AnnotationsType::Consumption)
-	            {
-		            annotation.values["consumption"] = GetAnnotations(
-				            leg_geometry,
-				            [](const guidance::LegGeometry::Annotation &anno) { return anno.consumption; });
-	            }
+	            throw std::runtime_error{"Flatbuffers currently not supported"};
+//	            if (requested_annotations & RouteParameters::AnnotationsType::Consumption)
+//	            {
+//		            annotation.values["consumption"] = GetAnnotations(
+//				            leg_geometry,
+//				            [](const guidance::LegGeometry::Annotation &anno) { return anno.consumption; });
+//	            }
                 if (requested_annotations & RouteParameters::AnnotationsType::Datasources)
                 {
                     annotation.values["datasources"] = GetAnnotations(

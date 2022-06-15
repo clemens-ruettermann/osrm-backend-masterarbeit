@@ -34,7 +34,7 @@ const std::string OSRM_PATH_ID3 = std::string{"/home/kenspeckle/git/data/osrm_da
 
 static std::string routesToGeojson(const std::vector<MyLegGeometry> &routes,
                                    const double battery_capacity_in_milli_wh) {
-	RouteConsumption complete_consumption = 0;
+	std::int64_t complete_consumption = 0;
 	std::stringstream geojson_string_stream;
 	geojson_string_stream << R"({)";
 	geojson_string_stream << R"(
@@ -42,7 +42,7 @@ static std::string routesToGeojson(const std::vector<MyLegGeometry> &routes,
 	"features": [)";
 	for (size_t k = 0; k < routes.size(); k++) {
 		const auto &route = routes[k];
-		RouteConsumption battery_cap = battery_capacity_in_milli_wh;
+		std::int64_t battery_cap = battery_capacity_in_milli_wh;
 		double distance_of_subroute = 0;
 		BOOST_ASSERT(route.locations.size() == route.annotations.size() + 1);
 		for (size_t j = 0; j < route.annotations.size(); j++) {
@@ -142,8 +142,12 @@ int main() {
 
 	{
 		engine::api::EVRouteParameters ev_route_parameters;
-		ev_route_parameters.lower_capacity_limit_percent = 0;
-		ev_route_parameters.upper_capacity_limit_percent = 100;
+		ev_route_parameters.wltp = 15.3;
+		ev_route_parameters.weight = 2000;
+		ev_route_parameters.battery_capacity = 58000000;
+
+		ev_route_parameters.lower_capacity_limit = 0;
+		ev_route_parameters.upper_capacity_limit = ev_route_parameters.battery_capacity;
 		ev_route_parameters.start = util::Coordinate::FromDouble(lon0,lat0);
 		ev_route_parameters.end = util::Coordinate::FromDouble(lon1,lat1);
 		ev_route_parameters.output_format = osrm::engine::api::EVRouteParameters::OutputFormat::IP_FRONTEND;
