@@ -98,13 +98,11 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
             const bool reverse_edge_order = graph.GetEdgeData(graph.BeginEdges(node_v)).reversed;
             const EdgeID forward_e2 = graph.BeginEdges(node_v) + reverse_edge_order;
             BOOST_ASSERT(SPECIAL_EDGEID != forward_e2);
-            BOOST_ASSERT(forward_e2 >= graph.BeginEdges(node_v) &&
-                         forward_e2 < graph.EndEdges(node_v));
+            BOOST_ASSERT(forward_e2 >= graph.BeginEdges(node_v) && forward_e2 < graph.EndEdges(node_v));
             const EdgeID reverse_e2 = graph.BeginEdges(node_v) + 1 - reverse_edge_order;
 
             BOOST_ASSERT(SPECIAL_EDGEID != reverse_e2);
-            BOOST_ASSERT(reverse_e2 >= graph.BeginEdges(node_v) &&
-                         reverse_e2 < graph.EndEdges(node_v));
+            BOOST_ASSERT(reverse_e2 >= graph.BeginEdges(node_v) && reverse_e2 < graph.EndEdges(node_v));
 
             const EdgeData &fwd_edge_data2 = graph.GetEdgeData(forward_e2);
             const EdgeData &rev_edge_data2 = graph.GetEdgeData(reverse_e2);
@@ -150,8 +148,7 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                 fwd_annotation_data1.CanCombineWith(fwd_annotation_data2) &&
                 rev_annotation_data1.CanCombineWith(rev_annotation_data2))
             {
-                BOOST_ASSERT(!(graph.GetEdgeData(forward_e1).reversed &&
-                               graph.GetEdgeData(reverse_e1).reversed));
+                BOOST_ASSERT(!(graph.GetEdgeData(forward_e1).reversed && graph.GetEdgeData(reverse_e1).reversed));
                 /*
                  * Remember Lane Data for compressed parts. This handles scenarios where lane-data
                  * is
@@ -250,15 +247,24 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                 const auto forward_duration1 = fwd_edge_data1.duration;
                 const auto forward_duration2 = fwd_edge_data2.duration;
                 const auto forward_distance2 = fwd_edge_data2.distance;
+				const auto forward_consumption1 = fwd_edge_data1.consumption;
+				const auto forward_consumption2 = fwd_edge_data2.consumption;
 
                 BOOST_ASSERT(0 != forward_weight1);
                 BOOST_ASSERT(0 != forward_weight2);
+
+#ifdef NON_ZERO_CONSUMPTION
+				BOOST_ASSERT(0 != forward_consumption1);
+				BOOST_ASSERT(0 != forward_consumption2);
+#endif
 
                 const auto reverse_weight1 = rev_edge_data1.weight;
                 const auto reverse_weight2 = rev_edge_data2.weight;
                 const auto reverse_duration1 = rev_edge_data1.duration;
                 const auto reverse_duration2 = rev_edge_data2.duration;
                 const auto reverse_distance2 = rev_edge_data2.distance;
+				const auto reverse_consumption1 = rev_edge_data1.consumption;
+				const auto reverse_consumption2 = rev_edge_data2.consumption;
 
 #ifndef NDEBUG
                 // Because distances are symmetrical, we only need one
@@ -273,7 +279,12 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                 BOOST_ASSERT(0 != reverse_weight1);
                 BOOST_ASSERT(0 != reverse_weight2);
 
-                // add weight of e2's to e1
+#ifdef NON_ZERO_CONSUMPTION
+				BOOST_ASSERT(0 != reverse_consumption1);
+	            BOOST_ASSERT(0 != reverse_consumption2);
+#endif
+
+	            // add weight of e2's to e1
                 graph.GetEdgeData(forward_e1).weight += forward_weight2;
                 graph.GetEdgeData(reverse_e1).weight += reverse_weight2;
 
@@ -285,14 +296,42 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                 graph.GetEdgeData(forward_e1).distance += forward_distance2;
                 graph.GetEdgeData(reverse_e1).distance += reverse_distance2;
 
-                if (node_weight_penalty != INVALID_EDGE_WEIGHT &&
-                    node_duration_penalty != MAXIMAL_EDGE_DURATION)
+				// add consumption of e2's to e1
+				// It is possible for the sum to be 0. But we see 0 as a special value that should never occur
+
+#ifdef NON_ZERO_CONSUMPTION
+	            BOOST_ASSERT(graph.GetEdgeData(forward_e1).consumption != 0); //forward_consumption2 is already asserted
+				if (graph.GetEdgeData(forward_e1).consumption + forward_consumption2 != 0) {
+					graph.GetEdgeData(forward_e1).consumption += forward_consumption2;
+				} else {
+					graph.GetEdgeData(forward_e1).consumption = 1;
+				}
+
+	            BOOST_ASSERT(graph.GetEdgeData(reverse_e1).consumption != 0);
+	            if (graph.GetEdgeData(reverse_e1).consumption + reverse_consumption2 != 0) {
+		            graph.GetEdgeData(reverse_e1).consumption += reverse_consumption2;
+	            } else {
+		            graph.GetEdgeData(reverse_e1).consumption = 1;
+	            }
+
+				BOOST_ASSERT(graph.GetEdgeData(forward_e1).consumption != 0 && graph.GetEdgeData(forward_e1).consumption != INVALID_EDGE_CONSUMPTION);
+	            BOOST_ASSERT(graph.GetEdgeData(reverse_e1).consumption != 0 && graph.GetEdgeData(reverse_e1).consumption != INVALID_EDGE_CONSUMPTION);
+
+#else
+	            graph.GetEdgeData(forward_e1).consumption += forward_consumption2;
+	            graph.GetEdgeData(reverse_e1).consumption += reverse_consumption2;
+	            BOOST_ASSERT(graph.GetEdgeData(forward_e1).consumption != INVALID_EDGE_CONSUMPTION);
+	            BOOST_ASSERT(graph.GetEdgeData(reverse_e1).consumption != INVALID_EDGE_CONSUMPTION);
+#endif
+
+
+                if (node_weight_penalty != INVALID_EDGE_WEIGHT && node_duration_penalty != MAXIMAL_EDGE_DURATION)
                 {
                     graph.GetEdgeData(forward_e1).weight += node_weight_penalty;
                     graph.GetEdgeData(reverse_e1).weight += node_weight_penalty;
                     graph.GetEdgeData(forward_e1).duration += node_duration_penalty;
                     graph.GetEdgeData(reverse_e1).duration += node_duration_penalty;
-                    // Note: no penalties for distances
+                    // Note: no penalties for distances and consumptions
                 }
 
                 // extend e1's to targets of e2's
@@ -315,6 +354,8 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                                                  forward_weight2,
                                                  forward_duration1,
                                                  forward_duration2,
+												 forward_consumption1,
+												 forward_consumption2,
                                                  node_weight_penalty,
                                                  node_duration_penalty);
                 geometry_compressor.CompressEdge(reverse_e1,
@@ -325,6 +366,8 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                                                  reverse_weight2,
                                                  reverse_duration1,
                                                  reverse_duration2,
+												 reverse_consumption1,
+												 reverse_consumption2,
                                                  node_weight_penalty,
                                                  node_duration_penalty);
             }
@@ -342,7 +385,7 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
         {
             const EdgeData &data = graph.GetEdgeData(edge_id);
             const NodeID target = graph.GetTarget(edge_id);
-            geometry_compressor.AddUncompressedEdge(edge_id, target, data.weight, data.duration);
+            geometry_compressor.AddUncompressedEdge(edge_id, target, data.weight, data.duration, data.consumption);
         }
     }
 }

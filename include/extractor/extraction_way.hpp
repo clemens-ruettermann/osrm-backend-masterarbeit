@@ -105,8 +105,7 @@ struct ExtractionWay
     double duration;
     // weight of the whole way in both directions
     double weight;
-	// consumption for the whole way in optimum conditions (i.e sun, no air conditioning)
-	double consumption;
+	// consumption for the whole way in optimum conditions (i.e sun, no air conditioning) in milli watt
     std::string name;
     std::string forward_ref;
     std::string backward_ref;

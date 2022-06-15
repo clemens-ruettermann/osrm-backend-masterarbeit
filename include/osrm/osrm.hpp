@@ -31,6 +31,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "engine/api/base_result.hpp"
 #include "osrm/osrm_fwd.hpp"
 #include "osrm/status.hpp"
+#include "charger_graph/charger_graph.hpp"
+#include "engine/api/ev_route_parameters.hpp"
 
 #include <memory>
 #include <string>
@@ -45,6 +47,31 @@ using engine::api::RouteParameters;
 using engine::api::TableParameters;
 using engine::api::TileParameters;
 using engine::api::TripParameters;
+using engine::api::EVRouteParameters;
+
+
+
+struct MyLegGeometry {
+	std::vector<util::Coordinate> locations;
+	std::vector<std::size_t> segment_offsets;
+	std::vector<double> segment_distances;
+	std::vector<OSMNodeID> osm_node_ids;
+
+	struct Annotation
+	{
+		double distance;
+		double duration;
+		double weight;
+		std::int32_t consumption;
+		DatasourceID datasource;
+
+		Annotation(double distance_, double duration_, double weight_, std::int32_t consumption_, DatasourceID datasource_) :
+			distance(distance_), duration(duration_), weight(weight_), consumption(consumption_), datasource(datasource_) {}
+	};
+	std::vector<Annotation> annotations;
+
+};
+
 
 /**
  * Represents a Open Source Routing Machine with access to its services.
@@ -137,8 +164,28 @@ class OSRM final
     Status Tile(const TileParameters &parameters, std::string &result) const;
     Status Tile(const TileParameters &parameters, engine::api::ResultT &result) const;
 
-  private:
+
+	std::vector<MyLegGeometry> RouteInternal(const std::vector<util::Coordinate> & coords) const;
+
+	Status EVRouteDijkstraAlongRoute(EVRouteParameters & parameters, json::Object &result) const;
+	Status EVRouteAlongRoute(EVRouteParameters & already_used_charger_id, json::Object &result) const;
+	Status EVRouteDijkstra(EVRouteParameters & parameters, json::Object &result) const;
+
+private:
     std::unique_ptr<engine::EngineInterface> engine_;
+	std::unique_ptr<enav::ChargerGraph> charger_graph_;
+
+	enav::ReachableChargers
+	getReachableChargers(const engine::PhantomNodePair &phantom_node_start, const engine::PhantomNodePair &phantom_node_end,
+	                     const std::vector<enav::Charger> &chargers, const double lower_capacity_limit,
+	                     const double upper_capacity_limit) const ;
+
+
+	const Status pointsToFinalRoute(EVRouteParameters::OutputFormat output_format, engine::PhantomNodePair start,
+	                                engine::PhantomNodePair end,
+									std::vector<ChargerId> used_charger_ids,
+									std::uint32_t battery_capacity,
+	                                json::Object &result) const;
 };
 } // namespace osrm
 

@@ -23,6 +23,7 @@ class CellCustomizer
         bool from_clique;
         EdgeDuration duration;
         EdgeDistance distance;
+	    EdgeConsumption consumption;
     };
 
   public:
@@ -70,6 +71,7 @@ class CellCustomizer
                 const EdgeWeight weight = heap.GetKey(node);
                 const EdgeDuration duration = heap.GetData(node).duration;
                 const EdgeDistance distance = heap.GetData(node).distance;
+				const EdgeConsumption consumption = heap.GetData(node).consumption;
 
                 RelaxNode(graph,
                           cells,
@@ -80,7 +82,8 @@ class CellCustomizer
                           node,
                           weight,
                           duration,
-                          distance);
+                          distance,
+						  consumption);
 
                 destinations_set.erase(node);
             }
@@ -89,11 +92,13 @@ class CellCustomizer
             auto weights = cell.GetOutWeight(source);
             auto durations = cell.GetOutDuration(source);
             auto distances = cell.GetOutDistance(source);
+			auto consumptions = cell.GetOutConsumption(source);
             for (auto &destination : destinations)
             {
                 BOOST_ASSERT(!weights.empty());
                 BOOST_ASSERT(!durations.empty());
                 BOOST_ASSERT(!distances.empty());
+                BOOST_ASSERT(!consumptions.empty());
 
                 const bool inserted = heap.WasInserted(destination);
                 weights.front() = inserted ? heap.GetKey(destination) : INVALID_EDGE_WEIGHT;
@@ -101,14 +106,17 @@ class CellCustomizer
                     inserted ? heap.GetData(destination).duration : MAXIMAL_EDGE_DURATION;
                 distances.front() =
                     inserted ? heap.GetData(destination).distance : INVALID_EDGE_DISTANCE;
+				consumptions.front() = inserted ? heap.GetData(destination).consumption : INVALID_EDGE_CONSUMPTION;
 
                 weights.advance_begin(1);
                 durations.advance_begin(1);
                 distances.advance_begin(1);
+				consumptions.advance_begin(1);
             }
             BOOST_ASSERT(weights.empty());
             BOOST_ASSERT(durations.empty());
             BOOST_ASSERT(distances.empty());
+            BOOST_ASSERT(consumptions.empty());
         }
     }
 
@@ -146,7 +154,8 @@ class CellCustomizer
                    NodeID node,
                    EdgeWeight weight,
                    EdgeDuration duration,
-                   EdgeDistance distance) const
+                   EdgeDistance distance,
+                   EdgeConsumption consumption) const
     {
         auto first_level = level == 1;
         BOOST_ASSERT(heap.WasInserted(node));
@@ -168,6 +177,7 @@ class CellCustomizer
                 auto subcell_destination = subcell.GetDestinationNodes().begin();
                 auto subcell_duration = subcell.GetOutDuration(node).begin();
                 auto subcell_distance = subcell.GetOutDistance(node).begin();
+                auto subcell_consumption = subcell.GetOutConsumption(node).begin();
                 for (auto subcell_weight : subcell.GetOutWeight(node))
                 {
                     if (subcell_weight != INVALID_EDGE_WEIGHT)
@@ -181,23 +191,26 @@ class CellCustomizer
                         const EdgeWeight to_weight = weight + subcell_weight;
                         const EdgeDuration to_duration = duration + *subcell_duration;
                         const EdgeDistance to_distance = distance + *subcell_distance;
+                        const EdgeConsumption to_consumption = consumption + *subcell_consumption;
                         if (!heap.WasInserted(to))
                         {
-                            heap.Insert(to, to_weight, {true, to_duration, to_distance});
+                            heap.Insert(to, to_weight, {true, to_duration, to_distance, to_consumption});
                         }
-                        else if (std::tie(to_weight, to_duration, to_distance) <
+                        else if (std::tie(to_weight, to_duration, to_distance, to_consumption) <
                                  std::tie(heap.GetKey(to),
                                           heap.GetData(to).duration,
-                                          heap.GetData(to).distance))
+                                          heap.GetData(to).distance,
+										  heap.GetData(to).consumption))
                         {
                             heap.DecreaseKey(to, to_weight);
-                            heap.GetData(to) = {true, to_duration, to_distance};
+                            heap.GetData(to) = {true, to_duration, to_distance, to_consumption};
                         }
                     }
 
                     ++subcell_destination;
                     ++subcell_duration;
                     ++subcell_distance;
+					++subcell_consumption;
                 }
             }
         }
@@ -218,17 +231,18 @@ class CellCustomizer
                 const EdgeWeight to_weight = weight + data.weight;
                 const EdgeDuration to_duration = duration + data.duration;
                 const EdgeDistance to_distance = distance + data.distance;
+                const EdgeConsumption to_consumption = consumption + data.consumption;
                 if (!heap.WasInserted(to))
                 {
                     heap.Insert(
-                        to, to_weight, {false, duration + data.duration, distance + data.distance});
+                        to, to_weight, {false, duration + data.duration, distance + data.distance, consumption + data.consumption});
                 }
-                else if (std::tie(to_weight, to_duration, to_distance) <
+                else if (std::tie(to_weight, to_duration, to_distance, to_consumption) <
                          std::tie(
-                             heap.GetKey(to), heap.GetData(to).duration, heap.GetData(to).distance))
+                             heap.GetKey(to), heap.GetData(to).duration, heap.GetData(to).distance, heap.GetData(to).consumption))
                 {
                     heap.DecreaseKey(to, to_weight);
-                    heap.GetData(to) = {false, to_duration, to_distance};
+                    heap.GetData(to) = {false, to_duration, to_distance, to_consumption};
                 }
             }
         }

@@ -222,6 +222,7 @@ struct WaypointT : public flatbuffers::NativeTable {
   typedef Waypoint TableType;
   std::string hint;
   float distance;
+  int32_t consumption;
   std::string name;
   std::unique_ptr<osrm::engine::api::fbresult::Position> location;
   std::unique_ptr<osrm::engine::api::fbresult::Uint64Pair> nodes;
@@ -231,6 +232,7 @@ struct WaypointT : public flatbuffers::NativeTable {
   uint32_t trips_index;
   WaypointT()
       : distance(0.0f),
+        consumption(0),
         matchings_index(0),
         waypoint_index(0),
         alternatives_count(0),
@@ -243,19 +245,23 @@ struct Waypoint FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_HINT = 4,
     VT_DISTANCE = 6,
-    VT_NAME = 8,
-    VT_LOCATION = 10,
-    VT_NODES = 12,
-    VT_MATCHINGS_INDEX = 14,
-    VT_WAYPOINT_INDEX = 16,
-    VT_ALTERNATIVES_COUNT = 18,
-    VT_TRIPS_INDEX = 20
+    VT_CONSUMPTION = 8,
+    VT_NAME = 10,
+    VT_LOCATION = 12,
+    VT_NODES = 14,
+    VT_MATCHINGS_INDEX = 16,
+    VT_WAYPOINT_INDEX = 18,
+    VT_ALTERNATIVES_COUNT = 20,
+    VT_TRIPS_INDEX = 22
   };
   const flatbuffers::String *hint() const {
     return GetPointer<const flatbuffers::String *>(VT_HINT);
   }
   float distance() const {
     return GetField<float>(VT_DISTANCE, 0.0f);
+  }
+  int32_t consumption() const {
+    return GetField<int32_t>(VT_CONSUMPTION, 0);
   }
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -283,6 +289,7 @@ struct Waypoint FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyOffset(verifier, VT_HINT) &&
            verifier.VerifyString(hint()) &&
            VerifyField<float>(verifier, VT_DISTANCE) &&
+           VerifyField<int32_t>(verifier, VT_CONSUMPTION) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
            VerifyField<osrm::engine::api::fbresult::Position>(verifier, VT_LOCATION) &&
@@ -306,6 +313,9 @@ struct WaypointBuilder {
   }
   void add_distance(float distance) {
     fbb_.AddElement<float>(Waypoint::VT_DISTANCE, distance, 0.0f);
+  }
+  void add_consumption(int32_t consumption) {
+    fbb_.AddElement<int32_t>(Waypoint::VT_CONSUMPTION, consumption, 0);
   }
   void add_name(flatbuffers::Offset<flatbuffers::String> name) {
     fbb_.AddOffset(Waypoint::VT_NAME, name);
@@ -344,6 +354,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypoint(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> hint = 0,
     float distance = 0.0f,
+    int32_t consumption = 0,
     flatbuffers::Offset<flatbuffers::String> name = 0,
     const osrm::engine::api::fbresult::Position *location = 0,
     const osrm::engine::api::fbresult::Uint64Pair *nodes = 0,
@@ -359,6 +370,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypoint(
   builder_.add_nodes(nodes);
   builder_.add_location(location);
   builder_.add_name(name);
+  builder_.add_consumption(consumption);
   builder_.add_distance(distance);
   builder_.add_hint(hint);
   return builder_.Finish();
@@ -368,6 +380,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypointDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *hint = nullptr,
     float distance = 0.0f,
+    int32_t consumption = 0,
     const char *name = nullptr,
     const osrm::engine::api::fbresult::Position *location = 0,
     const osrm::engine::api::fbresult::Uint64Pair *nodes = 0,
@@ -381,6 +394,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypointDirect(
       _fbb,
       hint__,
       distance,
+      consumption,
       name__,
       location,
       nodes,
@@ -460,6 +474,7 @@ struct AnnotationT : public flatbuffers::NativeTable {
   typedef Annotation TableType;
   std::vector<uint32_t> distance;
   std::vector<uint32_t> duration;
+  std::vector<int32_t> consumption;
   std::vector<uint32_t> datasources;
   std::vector<uint32_t> nodes;
   std::vector<uint32_t> weight;
@@ -474,17 +489,21 @@ struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DISTANCE = 4,
     VT_DURATION = 6,
-    VT_DATASOURCES = 8,
-    VT_NODES = 10,
-    VT_WEIGHT = 12,
-    VT_SPEED = 14,
-    VT_METADATA = 16
+    VT_CONSUMPTION = 8,
+    VT_DATASOURCES = 10,
+    VT_NODES = 12,
+    VT_WEIGHT = 14,
+    VT_SPEED = 16,
+    VT_METADATA = 18
   };
   const flatbuffers::Vector<uint32_t> *distance() const {
     return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_DISTANCE);
   }
   const flatbuffers::Vector<uint32_t> *duration() const {
     return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_DURATION);
+  }
+  const flatbuffers::Vector<int32_t> *consumption() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_CONSUMPTION);
   }
   const flatbuffers::Vector<uint32_t> *datasources() const {
     return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_DATASOURCES);
@@ -507,6 +526,8 @@ struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVector(distance()) &&
            VerifyOffset(verifier, VT_DURATION) &&
            verifier.VerifyVector(duration()) &&
+           VerifyOffset(verifier, VT_CONSUMPTION) &&
+           verifier.VerifyVector(consumption()) &&
            VerifyOffset(verifier, VT_DATASOURCES) &&
            verifier.VerifyVector(datasources()) &&
            VerifyOffset(verifier, VT_NODES) &&
@@ -532,6 +553,9 @@ struct AnnotationBuilder {
   }
   void add_duration(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> duration) {
     fbb_.AddOffset(Annotation::VT_DURATION, duration);
+  }
+  void add_consumption(flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumption) {
+    fbb_.AddOffset(Annotation::VT_CONSUMPTION, consumption);
   }
   void add_datasources(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> datasources) {
     fbb_.AddOffset(Annotation::VT_DATASOURCES, datasources);
@@ -564,6 +588,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotation(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::Vector<uint32_t>> distance = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint32_t>> duration = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumption = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint32_t>> datasources = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint32_t>> nodes = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint32_t>> weight = 0,
@@ -575,6 +600,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotation(
   builder_.add_weight(weight);
   builder_.add_nodes(nodes);
   builder_.add_datasources(datasources);
+  builder_.add_consumption(consumption);
   builder_.add_duration(duration);
   builder_.add_distance(distance);
   return builder_.Finish();
@@ -584,6 +610,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotationDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const std::vector<uint32_t> *distance = nullptr,
     const std::vector<uint32_t> *duration = nullptr,
+    const std::vector<int32_t> *consumption = nullptr,
     const std::vector<uint32_t> *datasources = nullptr,
     const std::vector<uint32_t> *nodes = nullptr,
     const std::vector<uint32_t> *weight = nullptr,
@@ -591,6 +618,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotationDirect(
     flatbuffers::Offset<osrm::engine::api::fbresult::Metadata> metadata = 0) {
   auto distance__ = distance ? _fbb.CreateVector<uint32_t>(*distance) : 0;
   auto duration__ = duration ? _fbb.CreateVector<uint32_t>(*duration) : 0;
+  auto consumption__ = consumption ? _fbb.CreateVector<int32_t>(*consumption) : 0;
   auto datasources__ = datasources ? _fbb.CreateVector<uint32_t>(*datasources) : 0;
   auto nodes__ = nodes ? _fbb.CreateVector<uint32_t>(*nodes) : 0;
   auto weight__ = weight ? _fbb.CreateVector<uint32_t>(*weight) : 0;
@@ -599,6 +627,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotationDirect(
       _fbb,
       distance__,
       duration__,
+      consumption__,
       datasources__,
       nodes__,
       weight__,
@@ -953,6 +982,7 @@ struct StepT : public flatbuffers::NativeTable {
   typedef Step TableType;
   float distance;
   float duration;
+  int32_t consumption;
   std::string polyline;
   std::vector<osrm::engine::api::fbresult::Position> coordinates;
   float weight;
@@ -970,6 +1000,7 @@ struct StepT : public flatbuffers::NativeTable {
   StepT()
       : distance(0.0f),
         duration(0.0f),
+        consumption(0),
         weight(0.0f),
         driving_side(false) {
   }
@@ -980,26 +1011,30 @@ struct Step FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DISTANCE = 4,
     VT_DURATION = 6,
-    VT_POLYLINE = 8,
-    VT_COORDINATES = 10,
-    VT_WEIGHT = 12,
-    VT_NAME = 14,
-    VT_REF = 16,
-    VT_PRONUNCIATION = 18,
-    VT_DESTINATIONS = 20,
-    VT_EXITS = 22,
-    VT_MODE = 24,
-    VT_MANEUVER = 26,
-    VT_INTERSECTIONS = 28,
-    VT_ROTARY_NAME = 30,
-    VT_ROTARY_PRONUNCIATION = 32,
-    VT_DRIVING_SIDE = 34
+    VT_CONSUMPTION = 8,
+    VT_POLYLINE = 10,
+    VT_COORDINATES = 12,
+    VT_WEIGHT = 14,
+    VT_NAME = 16,
+    VT_REF = 18,
+    VT_PRONUNCIATION = 20,
+    VT_DESTINATIONS = 22,
+    VT_EXITS = 24,
+    VT_MODE = 26,
+    VT_MANEUVER = 28,
+    VT_INTERSECTIONS = 30,
+    VT_ROTARY_NAME = 32,
+    VT_ROTARY_PRONUNCIATION = 34,
+    VT_DRIVING_SIDE = 36
   };
   float distance() const {
     return GetField<float>(VT_DISTANCE, 0.0f);
   }
   float duration() const {
     return GetField<float>(VT_DURATION, 0.0f);
+  }
+  int32_t consumption() const {
+    return GetField<int32_t>(VT_CONSUMPTION, 0);
   }
   const flatbuffers::String *polyline() const {
     return GetPointer<const flatbuffers::String *>(VT_POLYLINE);
@@ -1047,6 +1082,7 @@ struct Step FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<float>(verifier, VT_DISTANCE) &&
            VerifyField<float>(verifier, VT_DURATION) &&
+           VerifyField<int32_t>(verifier, VT_CONSUMPTION) &&
            VerifyOffset(verifier, VT_POLYLINE) &&
            verifier.VerifyString(polyline()) &&
            VerifyOffset(verifier, VT_COORDINATES) &&
@@ -1089,6 +1125,9 @@ struct StepBuilder {
   }
   void add_duration(float duration) {
     fbb_.AddElement<float>(Step::VT_DURATION, duration, 0.0f);
+  }
+  void add_consumption(int32_t consumption) {
+    fbb_.AddElement<int32_t>(Step::VT_CONSUMPTION, consumption, 0);
   }
   void add_polyline(flatbuffers::Offset<flatbuffers::String> polyline) {
     fbb_.AddOffset(Step::VT_POLYLINE, polyline);
@@ -1148,6 +1187,7 @@ inline flatbuffers::Offset<Step> CreateStep(
     flatbuffers::FlatBufferBuilder &_fbb,
     float distance = 0.0f,
     float duration = 0.0f,
+    int32_t consumption = 0,
     flatbuffers::Offset<flatbuffers::String> polyline = 0,
     flatbuffers::Offset<flatbuffers::Vector<const osrm::engine::api::fbresult::Position *>> coordinates = 0,
     float weight = 0.0f,
@@ -1176,6 +1216,7 @@ inline flatbuffers::Offset<Step> CreateStep(
   builder_.add_weight(weight);
   builder_.add_coordinates(coordinates);
   builder_.add_polyline(polyline);
+  builder_.add_consumption(consumption);
   builder_.add_duration(duration);
   builder_.add_distance(distance);
   builder_.add_driving_side(driving_side);
@@ -1186,6 +1227,7 @@ inline flatbuffers::Offset<Step> CreateStepDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     float distance = 0.0f,
     float duration = 0.0f,
+    int32_t consumption = 0,
     const char *polyline = nullptr,
     const std::vector<osrm::engine::api::fbresult::Position> *coordinates = nullptr,
     float weight = 0.0f,
@@ -1215,6 +1257,7 @@ inline flatbuffers::Offset<Step> CreateStepDirect(
       _fbb,
       distance,
       duration,
+      consumption,
       polyline__,
       coordinates__,
       weight,
@@ -1237,6 +1280,7 @@ struct LegT : public flatbuffers::NativeTable {
   typedef Leg TableType;
   double distance;
   double duration;
+  int32_t consumption;
   double weight;
   std::string summary;
   std::unique_ptr<osrm::engine::api::fbresult::AnnotationT> annotations;
@@ -1244,6 +1288,7 @@ struct LegT : public flatbuffers::NativeTable {
   LegT()
       : distance(0.0),
         duration(0.0),
+        consumption(0),
         weight(0.0) {
   }
 };
@@ -1253,16 +1298,20 @@ struct Leg FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DISTANCE = 4,
     VT_DURATION = 6,
-    VT_WEIGHT = 8,
-    VT_SUMMARY = 10,
-    VT_ANNOTATIONS = 12,
-    VT_STEPS = 14
+    VT_CONSUMPTION = 8,
+    VT_WEIGHT = 10,
+    VT_SUMMARY = 12,
+    VT_ANNOTATIONS = 14,
+    VT_STEPS = 16
   };
   double distance() const {
     return GetField<double>(VT_DISTANCE, 0.0);
   }
   double duration() const {
     return GetField<double>(VT_DURATION, 0.0);
+  }
+  int32_t consumption() const {
+    return GetField<int32_t>(VT_CONSUMPTION, 0);
   }
   double weight() const {
     return GetField<double>(VT_WEIGHT, 0.0);
@@ -1280,6 +1329,7 @@ struct Leg FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<double>(verifier, VT_DISTANCE) &&
            VerifyField<double>(verifier, VT_DURATION) &&
+           VerifyField<int32_t>(verifier, VT_CONSUMPTION) &&
            VerifyField<double>(verifier, VT_WEIGHT) &&
            VerifyOffset(verifier, VT_SUMMARY) &&
            verifier.VerifyString(summary()) &&
@@ -1303,6 +1353,9 @@ struct LegBuilder {
   }
   void add_duration(double duration) {
     fbb_.AddElement<double>(Leg::VT_DURATION, duration, 0.0);
+  }
+  void add_consumption(int32_t consumption) {
+    fbb_.AddElement<int32_t>(Leg::VT_CONSUMPTION, consumption, 0);
   }
   void add_weight(double weight) {
     fbb_.AddElement<double>(Leg::VT_WEIGHT, weight, 0.0);
@@ -1332,6 +1385,7 @@ inline flatbuffers::Offset<Leg> CreateLeg(
     flatbuffers::FlatBufferBuilder &_fbb,
     double distance = 0.0,
     double duration = 0.0,
+    int32_t consumption = 0,
     double weight = 0.0,
     flatbuffers::Offset<flatbuffers::String> summary = 0,
     flatbuffers::Offset<osrm::engine::api::fbresult::Annotation> annotations = 0,
@@ -1343,6 +1397,7 @@ inline flatbuffers::Offset<Leg> CreateLeg(
   builder_.add_steps(steps);
   builder_.add_annotations(annotations);
   builder_.add_summary(summary);
+  builder_.add_consumption(consumption);
   return builder_.Finish();
 }
 
@@ -1350,6 +1405,7 @@ inline flatbuffers::Offset<Leg> CreateLegDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     double distance = 0.0,
     double duration = 0.0,
+    int32_t consumption = 0,
     double weight = 0.0,
     const char *summary = nullptr,
     flatbuffers::Offset<osrm::engine::api::fbresult::Annotation> annotations = 0,
@@ -1360,6 +1416,7 @@ inline flatbuffers::Offset<Leg> CreateLegDirect(
       _fbb,
       distance,
       duration,
+      consumption,
       weight,
       summary__,
       annotations,
@@ -1372,6 +1429,7 @@ struct RouteObjectT : public flatbuffers::NativeTable {
   typedef RouteObject TableType;
   float distance;
   float duration;
+  int32_t consumption;
   float weight;
   std::string weight_name;
   float confidence;
@@ -1381,6 +1439,7 @@ struct RouteObjectT : public flatbuffers::NativeTable {
   RouteObjectT()
       : distance(0.0f),
         duration(0.0f),
+        consumption(0),
         weight(0.0f),
         confidence(0.0f) {
   }
@@ -1391,18 +1450,22 @@ struct RouteObject FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DISTANCE = 4,
     VT_DURATION = 6,
-    VT_WEIGHT = 8,
-    VT_WEIGHT_NAME = 10,
-    VT_CONFIDENCE = 12,
-    VT_POLYLINE = 14,
-    VT_COORDINATES = 16,
-    VT_LEGS = 18
+    VT_CONSUMPTION = 8,
+    VT_WEIGHT = 10,
+    VT_WEIGHT_NAME = 12,
+    VT_CONFIDENCE = 14,
+    VT_POLYLINE = 16,
+    VT_COORDINATES = 18,
+    VT_LEGS = 20
   };
   float distance() const {
     return GetField<float>(VT_DISTANCE, 0.0f);
   }
   float duration() const {
     return GetField<float>(VT_DURATION, 0.0f);
+  }
+  int32_t consumption() const {
+    return GetField<int32_t>(VT_CONSUMPTION, 0);
   }
   float weight() const {
     return GetField<float>(VT_WEIGHT, 0.0f);
@@ -1426,6 +1489,7 @@ struct RouteObject FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<float>(verifier, VT_DISTANCE) &&
            VerifyField<float>(verifier, VT_DURATION) &&
+           VerifyField<int32_t>(verifier, VT_CONSUMPTION) &&
            VerifyField<float>(verifier, VT_WEIGHT) &&
            VerifyOffset(verifier, VT_WEIGHT_NAME) &&
            verifier.VerifyString(weight_name()) &&
@@ -1452,6 +1516,9 @@ struct RouteObjectBuilder {
   }
   void add_duration(float duration) {
     fbb_.AddElement<float>(RouteObject::VT_DURATION, duration, 0.0f);
+  }
+  void add_consumption(int32_t consumption) {
+    fbb_.AddElement<int32_t>(RouteObject::VT_CONSUMPTION, consumption, 0);
   }
   void add_weight(float weight) {
     fbb_.AddElement<float>(RouteObject::VT_WEIGHT, weight, 0.0f);
@@ -1487,6 +1554,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObject(
     flatbuffers::FlatBufferBuilder &_fbb,
     float distance = 0.0f,
     float duration = 0.0f,
+    int32_t consumption = 0,
     float weight = 0.0f,
     flatbuffers::Offset<flatbuffers::String> weight_name = 0,
     float confidence = 0.0f,
@@ -1500,6 +1568,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObject(
   builder_.add_confidence(confidence);
   builder_.add_weight_name(weight_name);
   builder_.add_weight(weight);
+  builder_.add_consumption(consumption);
   builder_.add_duration(duration);
   builder_.add_distance(distance);
   return builder_.Finish();
@@ -1509,6 +1578,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObjectDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     float distance = 0.0f,
     float duration = 0.0f,
+    int32_t consumption = 0,
     float weight = 0.0f,
     const char *weight_name = nullptr,
     float confidence = 0.0f,
@@ -1523,6 +1593,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObjectDirect(
       _fbb,
       distance,
       duration,
+      consumption,
       weight,
       weight_name__,
       confidence,
@@ -1536,6 +1607,7 @@ flatbuffers::Offset<RouteObject> CreateRouteObject(flatbuffers::FlatBufferBuilde
 struct TableT : public flatbuffers::NativeTable {
   typedef Table TableType;
   std::vector<float> durations;
+  std::vector<int32_t> consumptions;
   uint16_t rows;
   uint16_t cols;
   std::vector<float> distances;
@@ -1551,14 +1623,18 @@ struct Table FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   typedef TableT NativeTableType;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DURATIONS = 4,
-    VT_ROWS = 6,
-    VT_COLS = 8,
-    VT_DISTANCES = 10,
-    VT_DESTINATIONS = 12,
-    VT_FALLBACK_SPEED_CELLS = 14
+    VT_CONSUMPTIONS = 6,
+    VT_ROWS = 8,
+    VT_COLS = 10,
+    VT_DISTANCES = 12,
+    VT_DESTINATIONS = 14,
+    VT_FALLBACK_SPEED_CELLS = 16
   };
   const flatbuffers::Vector<float> *durations() const {
     return GetPointer<const flatbuffers::Vector<float> *>(VT_DURATIONS);
+  }
+  const flatbuffers::Vector<int32_t> *consumptions() const {
+    return GetPointer<const flatbuffers::Vector<int32_t> *>(VT_CONSUMPTIONS);
   }
   uint16_t rows() const {
     return GetField<uint16_t>(VT_ROWS, 0);
@@ -1579,6 +1655,8 @@ struct Table FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_DURATIONS) &&
            verifier.VerifyVector(durations()) &&
+           VerifyOffset(verifier, VT_CONSUMPTIONS) &&
+           verifier.VerifyVector(consumptions()) &&
            VerifyField<uint16_t>(verifier, VT_ROWS) &&
            VerifyField<uint16_t>(verifier, VT_COLS) &&
            VerifyOffset(verifier, VT_DISTANCES) &&
@@ -1600,6 +1678,9 @@ struct TableBuilder {
   flatbuffers::uoffset_t start_;
   void add_durations(flatbuffers::Offset<flatbuffers::Vector<float>> durations) {
     fbb_.AddOffset(Table::VT_DURATIONS, durations);
+  }
+  void add_consumptions(flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumptions) {
+    fbb_.AddOffset(Table::VT_CONSUMPTIONS, consumptions);
   }
   void add_rows(uint16_t rows) {
     fbb_.AddElement<uint16_t>(Table::VT_ROWS, rows, 0);
@@ -1631,6 +1712,7 @@ struct TableBuilder {
 inline flatbuffers::Offset<Table> CreateTable(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::Vector<float>> durations = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int32_t>> consumptions = 0,
     uint16_t rows = 0,
     uint16_t cols = 0,
     flatbuffers::Offset<flatbuffers::Vector<float>> distances = 0,
@@ -1640,6 +1722,7 @@ inline flatbuffers::Offset<Table> CreateTable(
   builder_.add_fallback_speed_cells(fallback_speed_cells);
   builder_.add_destinations(destinations);
   builder_.add_distances(distances);
+  builder_.add_consumptions(consumptions);
   builder_.add_durations(durations);
   builder_.add_cols(cols);
   builder_.add_rows(rows);
@@ -1649,18 +1732,21 @@ inline flatbuffers::Offset<Table> CreateTable(
 inline flatbuffers::Offset<Table> CreateTableDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const std::vector<float> *durations = nullptr,
+    const std::vector<int32_t> *consumptions = nullptr,
     uint16_t rows = 0,
     uint16_t cols = 0,
     const std::vector<float> *distances = nullptr,
     const std::vector<flatbuffers::Offset<osrm::engine::api::fbresult::Waypoint>> *destinations = nullptr,
     const std::vector<uint32_t> *fallback_speed_cells = nullptr) {
   auto durations__ = durations ? _fbb.CreateVector<float>(*durations) : 0;
+  auto consumptions__ = consumptions ? _fbb.CreateVector<int32_t>(*consumptions) : 0;
   auto distances__ = distances ? _fbb.CreateVector<float>(*distances) : 0;
   auto destinations__ = destinations ? _fbb.CreateVector<flatbuffers::Offset<osrm::engine::api::fbresult::Waypoint>>(*destinations) : 0;
   auto fallback_speed_cells__ = fallback_speed_cells ? _fbb.CreateVector<uint32_t>(*fallback_speed_cells) : 0;
   return osrm::engine::api::fbresult::CreateTable(
       _fbb,
       durations__,
+      consumptions__,
       rows,
       cols,
       distances__,
@@ -1896,6 +1982,7 @@ inline void Waypoint::UnPackTo(WaypointT *_o, const flatbuffers::resolver_functi
   (void)_resolver;
   { auto _e = hint(); if (_e) _o->hint = _e->str(); };
   { auto _e = distance(); _o->distance = _e; };
+  { auto _e = consumption(); _o->consumption = _e; };
   { auto _e = name(); if (_e) _o->name = _e->str(); };
   { auto _e = location(); if (_e) _o->location = std::unique_ptr<osrm::engine::api::fbresult::Position>(new osrm::engine::api::fbresult::Position(*_e)); };
   { auto _e = nodes(); if (_e) _o->nodes = std::unique_ptr<osrm::engine::api::fbresult::Uint64Pair>(new osrm::engine::api::fbresult::Uint64Pair(*_e)); };
@@ -1915,6 +2002,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypoint(flatbuffers::FlatBufferBuild
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const WaypointT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _hint = _o->hint.empty() ? 0 : _fbb.CreateString(_o->hint);
   auto _distance = _o->distance;
+  auto _consumption = _o->consumption;
   auto _name = _o->name.empty() ? 0 : _fbb.CreateString(_o->name);
   auto _location = _o->location ? _o->location.get() : 0;
   auto _nodes = _o->nodes ? _o->nodes.get() : 0;
@@ -1926,6 +2014,7 @@ inline flatbuffers::Offset<Waypoint> CreateWaypoint(flatbuffers::FlatBufferBuild
       _fbb,
       _hint,
       _distance,
+      _consumption,
       _name,
       _location,
       _nodes,
@@ -1972,6 +2061,7 @@ inline void Annotation::UnPackTo(AnnotationT *_o, const flatbuffers::resolver_fu
   (void)_resolver;
   { auto _e = distance(); if (_e) { _o->distance.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->distance[_i] = _e->Get(_i); } } };
   { auto _e = duration(); if (_e) { _o->duration.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->duration[_i] = _e->Get(_i); } } };
+  { auto _e = consumption(); if (_e) { _o->consumption.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->consumption[_i] = _e->Get(_i); } } };
   { auto _e = datasources(); if (_e) { _o->datasources.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->datasources[_i] = _e->Get(_i); } } };
   { auto _e = nodes(); if (_e) { _o->nodes.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->nodes[_i] = _e->Get(_i); } } };
   { auto _e = weight(); if (_e) { _o->weight.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->weight[_i] = _e->Get(_i); } } };
@@ -1989,6 +2079,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotation(flatbuffers::FlatBufferB
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const AnnotationT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _distance = _o->distance.size() ? _fbb.CreateVector(_o->distance) : 0;
   auto _duration = _o->duration.size() ? _fbb.CreateVector(_o->duration) : 0;
+  auto _consumption = _o->consumption.size() ? _fbb.CreateVector(_o->consumption) : 0;
   auto _datasources = _o->datasources.size() ? _fbb.CreateVector(_o->datasources) : 0;
   auto _nodes = _o->nodes.size() ? _fbb.CreateVector(_o->nodes) : 0;
   auto _weight = _o->weight.size() ? _fbb.CreateVector(_o->weight) : 0;
@@ -1998,6 +2089,7 @@ inline flatbuffers::Offset<Annotation> CreateAnnotation(flatbuffers::FlatBufferB
       _fbb,
       _distance,
       _duration,
+      _consumption,
       _datasources,
       _nodes,
       _weight,
@@ -2130,6 +2222,7 @@ inline void Step::UnPackTo(StepT *_o, const flatbuffers::resolver_function_t *_r
   (void)_resolver;
   { auto _e = distance(); _o->distance = _e; };
   { auto _e = duration(); _o->duration = _e; };
+  { auto _e = consumption(); _o->consumption = _e; };
   { auto _e = polyline(); if (_e) _o->polyline = _e->str(); };
   { auto _e = coordinates(); if (_e) { _o->coordinates.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->coordinates[_i] = *_e->Get(_i); } } };
   { auto _e = weight(); _o->weight = _e; };
@@ -2156,6 +2249,7 @@ inline flatbuffers::Offset<Step> CreateStep(flatbuffers::FlatBufferBuilder &_fbb
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const StepT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _distance = _o->distance;
   auto _duration = _o->duration;
+  auto _consumption = _o->consumption;
   auto _polyline = _o->polyline.empty() ? 0 : _fbb.CreateString(_o->polyline);
   auto _coordinates = _o->coordinates.size() ? _fbb.CreateVectorOfStructs(_o->coordinates) : 0;
   auto _weight = _o->weight;
@@ -2174,6 +2268,7 @@ inline flatbuffers::Offset<Step> CreateStep(flatbuffers::FlatBufferBuilder &_fbb
       _fbb,
       _distance,
       _duration,
+      _consumption,
       _polyline,
       _coordinates,
       _weight,
@@ -2201,6 +2296,7 @@ inline void Leg::UnPackTo(LegT *_o, const flatbuffers::resolver_function_t *_res
   (void)_resolver;
   { auto _e = distance(); _o->distance = _e; };
   { auto _e = duration(); _o->duration = _e; };
+  { auto _e = consumption(); _o->consumption = _e; };
   { auto _e = weight(); _o->weight = _e; };
   { auto _e = summary(); if (_e) _o->summary = _e->str(); };
   { auto _e = annotations(); if (_e) _o->annotations = std::unique_ptr<osrm::engine::api::fbresult::AnnotationT>(_e->UnPack(_resolver)); };
@@ -2217,6 +2313,7 @@ inline flatbuffers::Offset<Leg> CreateLeg(flatbuffers::FlatBufferBuilder &_fbb, 
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const LegT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _distance = _o->distance;
   auto _duration = _o->duration;
+  auto _consumption = _o->consumption;
   auto _weight = _o->weight;
   auto _summary = _o->summary.empty() ? 0 : _fbb.CreateString(_o->summary);
   auto _annotations = _o->annotations ? CreateAnnotation(_fbb, _o->annotations.get(), _rehasher) : 0;
@@ -2225,6 +2322,7 @@ inline flatbuffers::Offset<Leg> CreateLeg(flatbuffers::FlatBufferBuilder &_fbb, 
       _fbb,
       _distance,
       _duration,
+      _consumption,
       _weight,
       _summary,
       _annotations,
@@ -2242,6 +2340,7 @@ inline void RouteObject::UnPackTo(RouteObjectT *_o, const flatbuffers::resolver_
   (void)_resolver;
   { auto _e = distance(); _o->distance = _e; };
   { auto _e = duration(); _o->duration = _e; };
+  { auto _e = consumption(); _o->consumption = _e; };
   { auto _e = weight(); _o->weight = _e; };
   { auto _e = weight_name(); if (_e) _o->weight_name = _e->str(); };
   { auto _e = confidence(); _o->confidence = _e; };
@@ -2260,6 +2359,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObject(flatbuffers::FlatBuffe
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const RouteObjectT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _distance = _o->distance;
   auto _duration = _o->duration;
+  auto _consumption = _o->consumption;
   auto _weight = _o->weight;
   auto _weight_name = _o->weight_name.empty() ? 0 : _fbb.CreateString(_o->weight_name);
   auto _confidence = _o->confidence;
@@ -2270,6 +2370,7 @@ inline flatbuffers::Offset<RouteObject> CreateRouteObject(flatbuffers::FlatBuffe
       _fbb,
       _distance,
       _duration,
+      _consumption,
       _weight,
       _weight_name,
       _confidence,
@@ -2288,6 +2389,7 @@ inline void Table::UnPackTo(TableT *_o, const flatbuffers::resolver_function_t *
   (void)_o;
   (void)_resolver;
   { auto _e = durations(); if (_e) { _o->durations.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->durations[_i] = _e->Get(_i); } } };
+  { auto _e = consumptions(); if (_e) { _o->consumptions.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->consumptions[_i] = _e->Get(_i); } } };
   { auto _e = rows(); _o->rows = _e; };
   { auto _e = cols(); _o->cols = _e; };
   { auto _e = distances(); if (_e) { _o->distances.resize(_e->size()); for (flatbuffers::uoffset_t _i = 0; _i < _e->size(); _i++) { _o->distances[_i] = _e->Get(_i); } } };
@@ -2304,6 +2406,7 @@ inline flatbuffers::Offset<Table> CreateTable(flatbuffers::FlatBufferBuilder &_f
   (void)_o;
   struct _VectorArgs { flatbuffers::FlatBufferBuilder *__fbb; const TableT* __o; const flatbuffers::rehasher_function_t *__rehasher; } _va = { &_fbb, _o, _rehasher}; (void)_va;
   auto _durations = _o->durations.size() ? _fbb.CreateVector(_o->durations) : 0;
+  auto _consumptions = _o->consumptions.size() ? _fbb.CreateVector(_o->consumptions) : 0;
   auto _rows = _o->rows;
   auto _cols = _o->cols;
   auto _distances = _o->distances.size() ? _fbb.CreateVector(_o->distances) : 0;
@@ -2312,6 +2415,7 @@ inline flatbuffers::Offset<Table> CreateTable(flatbuffers::FlatBufferBuilder &_f
   return osrm::engine::api::fbresult::CreateTable(
       _fbb,
       _durations,
+      _consumptions,
       _rows,
       _cols,
       _distances,

@@ -48,13 +48,22 @@ Thumbs.db
 #######################
 /_build*
 /build/
-/build2/
-
+/build2
+/build_release
+/build_release_add_consumption
+/build_release_car_independent
+/cmake-build-debug
+/cmake-build-release
+/cmake-build-relwithdebinfo
+/cmake-build-debug-remote
+/cmake-build-release-remote
 /example/build/
 /test/data/monaco.osrm*
+/test/data/street.osrm*
 /test/data/ch
 /test/data/corech
 /test/data/mld
+/test/data/street/*
 /cmake/postinst
 
 # Eclipse related files #
@@ -111,3 +120,4 @@ debug.lua
 
 # node-osrm artifacts
 lib/binding
+*.tif.aux.xml

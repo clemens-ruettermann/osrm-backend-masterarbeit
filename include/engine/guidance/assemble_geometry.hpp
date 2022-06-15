@@ -23,7 +23,7 @@ namespace engine
 namespace guidance
 {
 // Extracts the geometry for each segment and calculates the traveled distance
-// Combines the geometry form the phantom node with the PathData
+// Combines the geometry from the phantom node with the PathData
 // to the full route geometry.
 //
 // turn    0   1   2   3   4
@@ -95,8 +95,8 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
                 //       non-preceeding-turn segments, but contains the turn value
                 //       for segments before a turn.
                 (path_point.duration_until_turn - path_point.duration_of_turn) / 10.,
-                (path_point.weight_until_turn - path_point.weight_of_turn) /
-                    facade.GetWeightMultiplier(),
+                (path_point.weight_until_turn - path_point.weight_of_turn) /facade.GetWeightMultiplier(),
+				path_point.consumption_until_turn,
                 path_point.datasource_id});
             geometry.locations.push_back(std::move(coordinate));
             geometry.osm_node_ids.push_back(osm_node_id);
@@ -122,29 +122,40 @@ inline LegGeometry assembleGeometry(const datafacade::BaseDataFacade &facade,
         auto duration =
             std::abs(
                 (reversed_target ? target_node.reverse_duration : target_node.forward_duration) -
-                (reversed_source ? source_node.reverse_duration : source_node.forward_duration)) /
-            10.;
+                (reversed_source ? source_node.reverse_duration : source_node.forward_duration)) / 10.;
         BOOST_ASSERT(duration >= 0);
         auto weight =
             std::abs((reversed_target ? target_node.reverse_weight : target_node.forward_weight) -
-                     (reversed_source ? source_node.reverse_weight : source_node.forward_weight)) /
-            facade.GetWeightMultiplier();
+                     (reversed_source ? source_node.reverse_weight : source_node.forward_weight)) / facade.GetWeightMultiplier();
         BOOST_ASSERT(weight >= 0);
 
+		auto consumption = (reversed_target ? target_node.reverse_consumption : target_node.forward_consumption) -
+				(reversed_source ? source_node.reverse_consumption : source_node.forward_consumption);
         geometry.annotations.emplace_back(
             LegGeometry::Annotation{current_distance,
                                     duration,
                                     weight,
+									consumption,
                                     forward_datasources(target_node.fwd_segment_position)});
     }
     else
     {
-        geometry.annotations.emplace_back(LegGeometry::Annotation{
-            current_distance,
-            (reversed_target ? target_node.reverse_duration : target_node.forward_duration) / 10.,
-            (reversed_target ? target_node.reverse_weight : target_node.forward_weight) /
-                facade.GetWeightMultiplier(),
-            forward_datasources(target_node.fwd_segment_position)});
+		if (reversed_target) {
+			geometry.annotations.emplace_back(LegGeometry::Annotation{
+					current_distance,
+					target_node.reverse_duration / 10.,
+					target_node.reverse_weight / facade.GetWeightMultiplier(),
+					target_node.reverse_consumption,
+					forward_datasources(target_node.fwd_segment_position)});
+		} else {
+			geometry.annotations.emplace_back(LegGeometry::Annotation{
+					current_distance,
+					target_node.forward_duration / 10.,
+					target_node.forward_weight / facade.GetWeightMultiplier(),
+					target_node.forward_consumption,
+					forward_datasources(target_node.fwd_segment_position)});
+		}
+
     }
 
     geometry.segment_offsets.push_back(geometry.locations.size());

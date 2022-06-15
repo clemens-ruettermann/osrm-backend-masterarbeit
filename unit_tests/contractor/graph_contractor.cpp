@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE(contract_graph)
     auto reference_graph = makeGraph(edges);
 
     auto contracted_graph = reference_graph;
-    std::vector<bool> core = contractGraph(contracted_graph, {1, 1, 1, 1, 1, 1});
+    std::vector<bool> core = contractGraph(contracted_graph, {1, 1, 1, 1, 1, 1}, {1, 1, 1, 1, 1, 1});
 
     // This contraction order is dependent on the priority caculation in the contractor
     // but deterministic for the same graph.
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(contract_graph)
     reference_graph.DeleteEdgesTo(1, 3);
     reference_graph.DeleteEdgesTo(4, 3);
     // Insert shortcut
-    reference_graph.InsertEdge(4, 1, {2, 4, 1.0, 3, 0, true, true, false});
+    reference_graph.InsertEdge(4, 1, {2, 4, 1.0, 3, 0, 10, true, true, false});
 
     /* After contracting 4:
      *

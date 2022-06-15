@@ -8,6 +8,7 @@ table Metadata {
 table Annotation {
     distance: [uint];
     duration: [uint];
+    consumption: [int];
     datasources: [uint];
     nodes: [uint];
     weight: [uint];
@@ -73,6 +74,7 @@ table Intersection {
 table Step {
     distance: float;
     duration: float;
+    consumption: int;
     polyline: string;
     coordinates: [Position];
     weight: float;
@@ -92,6 +94,7 @@ table Step {
 table Leg {
     distance: double;
     duration: double;
+    consumption: int;
     weight: double;
     summary: string;
     annotations: Annotation;
@@ -101,6 +104,7 @@ table Leg {
 table RouteObject {
     distance: float;
     duration: float;
+    consumption: int;
     weight: float;
     weight_name: string;
     confidence: float; //Used only by 'Match' service

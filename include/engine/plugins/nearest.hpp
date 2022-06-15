@@ -23,6 +23,13 @@ class NearestPlugin final : public BasePlugin
                          const api::NearestParameters &params,
                          osrm::engine::api::ResultT &result) const;
 
+	std::vector<PhantomNodePair> GetSnappedPhantomNodes(const RoutingAlgorithmsInterface &algorithms, const std::vector<util::Coordinate> & coordinates) const;
+	std::vector<PhantomNode> SnapPhantomNodePairs(const std::vector<PhantomNodePair> & phantom_node_pairs) const;
+	PhantomNode SnapPhantomNodePair(const PhantomNodePair & phantom_node_pair) const;
+	PhantomNodePair GetPhantomNodePair(const RoutingAlgorithmsInterface &algorithms, const util::Coordinate & coordinate) const;
+
+
+
   private:
     const int max_results;
 };

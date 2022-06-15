@@ -31,16 +31,16 @@ struct ManyToManyHeapData : HeapData
 {
     EdgeWeight duration;
     EdgeDistance distance;
-    ManyToManyHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance)
-        : HeapData(p), duration(duration), distance(distance)
+	EdgeConsumption consumption;
+    ManyToManyHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeConsumption consumption)
+        : HeapData(p), duration(duration), distance(distance), consumption(consumption)
     {
     }
 };
 
 template <> struct SearchEngineData<routing_algorithms::ch::Algorithm>
 {
-    using QueryHeap = util::
-        QueryHeap<NodeID, NodeID, EdgeWeight, HeapData, util::UnorderedMapStorage<NodeID, int>>;
+    using QueryHeap = util::QueryHeap<NodeID, NodeID, EdgeWeight, HeapData, util::UnorderedMapStorage<NodeID, int>>;
 
     using ManyToManyQueryHeap = util::QueryHeap<NodeID,
                                                 NodeID,
@@ -80,15 +80,17 @@ struct ManyToManyMultiLayerDijkstraHeapData : MultiLayerDijkstraHeapData
 {
     EdgeWeight duration;
     EdgeDistance distance;
-    ManyToManyMultiLayerDijkstraHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance)
-        : MultiLayerDijkstraHeapData(p), duration(duration), distance(distance)
+	EdgeConsumption consumption;
+    ManyToManyMultiLayerDijkstraHeapData(NodeID p, EdgeWeight duration, EdgeDistance distance, EdgeConsumption consumption)
+        : MultiLayerDijkstraHeapData(p), duration(duration), distance(distance), consumption(consumption)
     {
     }
     ManyToManyMultiLayerDijkstraHeapData(NodeID p,
                                          bool from,
                                          EdgeWeight duration,
-                                         EdgeDistance distance)
-        : MultiLayerDijkstraHeapData(p, from), duration(duration), distance(distance)
+                                         EdgeDistance distance,
+                                         EdgeConsumption consumption)
+        : MultiLayerDijkstraHeapData(p, from), duration(duration), distance(distance), consumption(consumption)
     {
     }
 };

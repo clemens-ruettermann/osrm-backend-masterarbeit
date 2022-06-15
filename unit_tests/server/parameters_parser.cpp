@@ -388,14 +388,15 @@ BOOST_AUTO_TEST_CASE(valid_route_urls)
     reference_speed.coordinates = coords_1;
     auto result_speed =
         parseParameters<RouteParameters>("1,2;3,4?geometries=polyline&"
-                                         "overview=simplified&annotations=duration,distance,speed");
+                                         "overview=simplified&annotations=duration,distance,speed,consumption");
     BOOST_CHECK(result_speed);
     BOOST_CHECK_EQUAL(reference_speed.geometries, result_speed->geometries);
     BOOST_CHECK_EQUAL(reference_speed.overview, result_speed->overview);
     BOOST_CHECK_EQUAL(result_speed->annotations_type ==
                           (RouteParameters::AnnotationsType::Duration |
                            RouteParameters::AnnotationsType::Distance |
-                           RouteParameters::AnnotationsType::Speed),
+                           RouteParameters::AnnotationsType::Speed |
+						   RouteParameters::AnnotationsType::Consumption),
                       true);
     BOOST_CHECK_EQUAL(result_speed->annotations, true);
 
@@ -748,6 +749,21 @@ BOOST_AUTO_TEST_CASE(valid_tile_urls)
     BOOST_CHECK_EQUAL(reference_1.x, result_1->x);
     BOOST_CHECK_EQUAL(reference_1.y, result_1->y);
     BOOST_CHECK_EQUAL(reference_1.z, result_1->z);
+}
+
+BOOST_AUTO_TEST_CASE(test_ev_parameters) {
+	TableParameters reference_6{};
+	reference_6.coordinates = coords_1;
+	auto result_11 = parseParameters<TableParameters>("1,2;3,4?sources=all&destinations=all&"
+	                                                  "annotations=duration&fallback_speed=1&"
+	                                                  "fallback_coordinate=snapped&scale_factor=2");
+	BOOST_CHECK(result_11);
+	CHECK_EQUAL_RANGE(reference_1.sources, result_11->sources);
+	CHECK_EQUAL_RANGE(reference_1.destinations, result_11->destinations);
+	CHECK_EQUAL_RANGE(reference_1.bearings, result_11->bearings);
+	CHECK_EQUAL_RANGE(reference_1.radiuses, result_11->radiuses);
+	CHECK_EQUAL_RANGE(reference_1.approaches, result_11->approaches);
+	CHECK_EQUAL_RANGE(reference_1.coordinates, result_11->coordinates);
 }
 
 BOOST_AUTO_TEST_CASE(valid_trip_urls)

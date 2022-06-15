@@ -271,6 +271,16 @@ class ContiguousInternalMemoryDataFacadeBase : public BaseDataFacade
         return segment_data.GetReverseWeights(id);
     }
 
+	ConsumptionForwardRange GetUncompressedForwardConsumptions(const EdgeID id) const override final
+	{
+		return segment_data.GetForwardConsumptions(id);
+	}
+
+	ConsumptionReverseRange GetUncompressedReverseConsumptions(const EdgeID id) const override final
+	{
+		return segment_data.GetReverseConsumptions(id);
+	}
+
     // Returns the data source ids that were used to supply the edge
     // weights.
     DatasourceForwardRange GetUncompressedForwardDatasources(const EdgeID id) const override final
@@ -715,6 +725,11 @@ template <> class ContiguousInternalMemoryAlgorithmDataFacade<MLD> : public Algo
     {
         return query_graph.GetNodeDistance(node);
     }
+
+	EdgeConsumption GetNodeConsumption(const NodeID node) const override final
+	{
+		return query_graph.GetNodeConsumption(node);
+	}
 
     bool IsForwardEdge(const NodeID node) const override final
     {

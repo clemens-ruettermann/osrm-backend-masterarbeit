@@ -44,7 +44,7 @@
       - ADDED: Add node bindings support for Node 12, 14, and publish binaries [#5918](https://github.com/Project-OSRM/osrm-backend/pull/5918)
       - REMOVED: we no longer publish Node 8 binary modules (they are still buildable from source) [#5918](https://github.com/Project-OSRM/osrm-backend/pull/5918)
     - Routing:
-      - FIXED: Avoid copying ManyToMany table results [#5923](https://github.com/Project-OSRM/osrm-backend/pull/5923)
+      - FIXED: Avoid copying ManyToManyInternal table results [#5923](https://github.com/Project-OSRM/osrm-backend/pull/5923)
       - FIXED: Reduce copying in API parameter constructors [#5925](https://github.com/Project-OSRM/osrm-backend/pull/5925)
     - Misc:
       - CHANGED: Cleanup NodeJS dependencies [#5945](https://github.com/Project-OSRM/osrm-backend/pull/5945)

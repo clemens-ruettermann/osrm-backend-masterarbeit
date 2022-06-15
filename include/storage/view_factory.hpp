@@ -154,9 +154,11 @@ inline auto make_segment_data_view(const SharedDataIndex &index, const std::stri
             index, name + "/reverse_durations/packed"),
         num_entries);
 
+	auto fwd_consumption_list = make_vector_view<SegmentConsumption>(index, name + "/forward_consumptions");
+	auto rev_consumption_list = make_vector_view<SegmentConsumption>(index, name + "/reverse_consumptions");
+
     auto fwd_datasources_list =
         make_vector_view<DatasourceID>(index, name + "/forward_data_sources");
-
     auto rev_datasources_list =
         make_vector_view<DatasourceID>(index, name + "/reverse_data_sources");
 
@@ -166,6 +168,8 @@ inline auto make_segment_data_view(const SharedDataIndex &index, const std::stri
                                       std::move(rev_weight_list),
                                       std::move(fwd_duration_list),
                                       std::move(rev_duration_list),
+									  std::move(fwd_consumption_list),
+									  std::move(rev_consumption_list),
                                       std::move(fwd_datasources_list),
                                       std::move(rev_datasources_list)};
 }
@@ -300,13 +304,15 @@ inline auto make_filtered_cell_metric_view(const SharedDataIndex &index,
     auto weights_block_id = prefix + "/weights";
     auto durations_block_id = prefix + "/durations";
     auto distances_block_id = prefix + "/distances";
+    auto consumptions_block_id = prefix + "/consumptions";
 
     auto weights = make_vector_view<EdgeWeight>(index, weights_block_id);
     auto durations = make_vector_view<EdgeDuration>(index, durations_block_id);
     auto distances = make_vector_view<EdgeDistance>(index, distances_block_id);
+    auto consumptions = make_vector_view<EdgeConsumption>(index, consumptions_block_id);
 
     return customizer::CellMetricView{
-        std::move(weights), std::move(durations), std::move(distances)};
+        std::move(weights), std::move(durations), std::move(distances), std::move(consumptions)};
 }
 
 inline auto make_cell_metric_view(const SharedDataIndex &index, const std::string &name)
@@ -320,13 +326,15 @@ inline auto make_cell_metric_view(const SharedDataIndex &index, const std::strin
         auto weights_block_id = prefix + "/weights";
         auto durations_block_id = prefix + "/durations";
         auto distances_block_id = prefix + "/distances";
+        auto consumptions_block_id = prefix + "/consumptions";
 
         auto weights = make_vector_view<EdgeWeight>(index, weights_block_id);
         auto durations = make_vector_view<EdgeDuration>(index, durations_block_id);
         auto distances = make_vector_view<EdgeDistance>(index, distances_block_id);
+        auto consumptions = make_vector_view<EdgeConsumption>(index, consumptions_block_id);
 
         cell_metric_excludes.push_back(customizer::CellMetricView{
-            std::move(weights), std::move(durations), std::move(distances)});
+            std::move(weights), std::move(durations), std::move(distances), std::move(consumptions)});
     }
 
     return cell_metric_excludes;
@@ -343,6 +351,7 @@ inline auto make_multi_level_graph_view(const SharedDataIndex &index, const std:
     auto node_weights = make_vector_view<EdgeWeight>(index, name + "/node_weights");
     auto node_durations = make_vector_view<EdgeDuration>(index, name + "/node_durations");
     auto node_distances = make_vector_view<EdgeDistance>(index, name + "/node_distances");
+    auto node_consumptions = make_vector_view<EdgeConsumption>(index, name + "/node_consumptions");
     auto is_forward_edge = make_vector_view<bool>(index, name + "/is_forward_edge");
     auto is_backward_edge = make_vector_view<bool>(index, name + "/is_backward_edge");
 
@@ -352,6 +361,7 @@ inline auto make_multi_level_graph_view(const SharedDataIndex &index, const std:
                                                     std::move(node_weights),
                                                     std::move(node_durations),
                                                     std::move(node_distances),
+													std::move(node_consumptions),
                                                     std::move(is_forward_edge),
                                                     std::move(is_backward_edge));
 }
@@ -377,6 +387,11 @@ inline auto make_filtered_graph_view(const SharedDataIndex &index,
     auto edge_list = make_vector_view<contractor::QueryGraphView::EdgeArrayEntry>(
         index, name + "/contracted_graph/edge_array");
 
+#ifdef NON_ZERO_CONSUMPTION
+	for (auto & it : edge_list) {
+		BOOST_ASSERT(it.data.consumption != 0 && it.data.consumption != INVALID_EDGE_CONSUMPTION);
+	}
+#endif
     return util::FilteredGraphView<contractor::QueryGraphView>({node_list, edge_list}, edge_filter);
 }
 } // namespace storage

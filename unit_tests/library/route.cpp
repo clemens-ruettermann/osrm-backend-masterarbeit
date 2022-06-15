@@ -514,7 +514,8 @@ void speed_annotation_matches_duration_and_distance(bool use_json_only_api)
     RouteParameters params;
     params.annotations_type = RouteParameters::AnnotationsType::Duration |
                               RouteParameters::AnnotationsType::Distance |
-                              RouteParameters::AnnotationsType::Speed;
+                              RouteParameters::AnnotationsType::Speed |
+							  RouteParameters::AnnotationsType::Consumption;
     params.coordinates.push_back(get_dummy_location());
     params.coordinates.push_back(get_dummy_location());
 
@@ -529,6 +530,7 @@ void speed_annotation_matches_duration_and_distance(bool use_json_only_api)
     const auto &speeds = annotation.values.at("speed").get<json::Array>().values;
     const auto &durations = annotation.values.at("duration").get<json::Array>().values;
     const auto &distances = annotation.values.at("distance").get<json::Array>().values;
+    const auto &consumptions = annotation.values.at("consumption").get<json::Array>().values;
     int length = speeds.size();
 
     BOOST_CHECK_EQUAL(length, 1);
@@ -537,6 +539,8 @@ void speed_annotation_matches_duration_and_distance(bool use_json_only_api)
         auto speed = speeds[i].get<json::Number>().value;
         auto duration = durations[i].get<json::Number>().value;
         auto distance = distances[i].get<json::Number>().value;
+        auto consumption = consumptions[i].get<json::Number>().value;
+
         auto calc = std::round(distance / duration * 10.) / 10.;
         BOOST_CHECK_EQUAL(speed, std::isnan(calc) ? 0 : calc);
 
@@ -544,6 +548,10 @@ void speed_annotation_matches_duration_and_distance(bool use_json_only_api)
         BOOST_CHECK_EQUAL(speed, 0);
         BOOST_CHECK_EQUAL(distance, 0);
         BOOST_CHECK_EQUAL(duration, 0);
+#ifdef NON_ZERO_CONSUMPTION
+		BOOST_CHECK_EQUAL(consumption, 0);
+#endif
+
     }
 }
 BOOST_AUTO_TEST_CASE(speed_annotation_matches_duration_and_distance_old_api)

@@ -7,7 +7,7 @@ project(FlatBuffers)
 
 # NOTE: Code coverage only works on Linux & OSX.
 option(FLATBUFFERS_CODE_COVERAGE "Enable the code coverage build option." OFF)
-option(FLATBUFFERS_BUILD_TESTS "Enable the build of tests and samples." ON)
+option(FLATBUFFERS_BUILD_TESTS "Enable the build of tests and samples." OFF)
 option(FLATBUFFERS_INSTALL "Enable the installation of targets." ON)
 option(FLATBUFFERS_BUILD_FLATLIB "Enable the build of the flatbuffers library"
        ON)
@@ -176,7 +176,7 @@ if(EXISTS "${CMAKE_TOOLCHAIN_FILE}")
   message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}.")
 elseif(APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -stdlib=libc++")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Werror -Wextra -Wno-unused-parameter")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wno-error -Wextra -Wno-unused-parameter")
   set(FLATBUFFERS_PRIVATE_CXX_FLAGS "-Wold-style-cast")
 elseif(CMAKE_COMPILER_IS_GNUCXX)
   if(CYGWIN)

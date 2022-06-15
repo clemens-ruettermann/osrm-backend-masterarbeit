@@ -86,6 +86,13 @@ double fccApproximateDistance(const Coordinate coordinate_1, const Coordinate co
         .distance({lon1, lat1}, {lon2, lat2});
 }
 
+
+double haversineDistanceFromDoubles(const double lon1, const double lat1, const double lon2, const double lat2) {
+	auto coord1 = Coordinate::FromDouble(lon1, lat1);
+	auto coord2 = Coordinate::FromDouble(lon2, lat2);
+	return haversineDistance(coord1, coord2);
+}
+
 double haversineDistance(const Coordinate coordinate_1, const Coordinate coordinate_2)
 {
     auto lon1 = static_cast<int>(coordinate_1.lon);

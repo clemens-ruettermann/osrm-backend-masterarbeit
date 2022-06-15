@@ -216,9 +216,8 @@ Status TripPlugin::HandleRequest(const RoutingAlgorithmsInterface &algorithms,
     BOOST_ASSERT(snapped_phantoms.size() == number_of_locations);
 
     // compute the duration table of all phantom nodes
-    auto result_duration_table = util::DistTableWrapper<EdgeWeight>(
-        algorithms.ManyToManySearch(snapped_phantoms, {}, {}, /*requestDistance*/ false).first,
-        number_of_locations);
+	auto duration_table = std::get<0>(algorithms.ManyToManySearch(snapped_phantoms, {}, {}, /*requestDistance*/ false));
+    auto result_duration_table = util::DistTableWrapper<EdgeWeight>(duration_table, number_of_locations);
 
     if (result_duration_table.size() == 0)
     {

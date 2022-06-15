@@ -2,6 +2,7 @@ DATA_NAME:=monaco
 OSRM_BUILD_DIR?=../../build
 PROFILE_ROOT:=../../profiles
 SCRIPT_ROOT:=../../scripts
+OSRM_ELEVATION:=$(OSRM_BUILD_DIR)/osrm-elevation
 OSRM_EXTRACT:=$(OSRM_BUILD_DIR)/osrm-extract
 OSRM_CONTRACT:=$(OSRM_BUILD_DIR)/osrm-contract
 OSRM_PARTITION:=$(OSRM_BUILD_DIR)/osrm-partition
@@ -10,15 +11,25 @@ OSRM_ROUTED:=$(OSRM_BUILD_DIR)/osrm-routed
 POLY2REQ:=$(SCRIPT_ROOT)/poly2req.js
 MD5SUM:=$(SCRIPT_ROOT)/md5sum.js
 TIMER:=$(SCRIPT_ROOT)/timer.js
-PROFILE:=$(PROFILE_ROOT)/car.lua
+PROFILE:=$(PROFILE_ROOT)/eauto.lua
 
 all: data
 
-data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr mld/$(DATA_NAME).osrm.partition
+data: ch/$(DATA_NAME).osrm.hsgr corech/$(DATA_NAME).osrm.hsgr street/street.osrm.hsgr
+#mld/$(DATA_NAME).osrm.partition
 
 clean:
-	-rm -r $(DATA_NAME).*
-	-rm -r ch corech mld
+	-rm -rf $(DATA_NAME).osrm*
+	-rm -rf street.osrm*
+	-rm -rf ch corech mld street
+
+$(DATA_NAME).osrm: $(DATA_NAME).osm.pbf $(DATA_NAME).poly $(PROFILE) $(OSRM_EXTRACT)
+	@echo "Verifiyng data file integrity..."
+	$(MD5SUM) -c data.md5sum
+	@echo "Running osrm-extract..."
+	$(TIMER) "osrm-elevation\t$@" $(OSRM_ELEVATION) $(DATA_NAME).osm.pbf --geotiff elevation/monaco_south.tif --geotiff elevation/monaco_north.tif
+	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) $< -p $(PROFILE)
+
 
 ch/$(DATA_NAME).osrm: $(DATA_NAME).osrm
 	mkdir -p ch
@@ -32,11 +43,6 @@ mld/$(DATA_NAME).osrm: $(DATA_NAME).osrm
 	mkdir -p mld
 	cp $(DATA_NAME).osrm $(DATA_NAME).osrm.* mld/
 
-$(DATA_NAME).osrm: $(DATA_NAME).osm.pbf $(DATA_NAME).poly $(PROFILE) $(OSRM_EXTRACT)
-	@echo "Verifiyng data file integrity..."
-	$(MD5SUM) -c data.md5sum
-	@echo "Running osrm-extract..."
-	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) $< -p $(PROFILE)
 
 ch/$(DATA_NAME).osrm.hsgr: ch/$(DATA_NAME).osrm $(PROFILE) $(OSRM_CONTRACT)
 	@echo "Running osrm-contract..."
@@ -45,6 +51,18 @@ ch/$(DATA_NAME).osrm.hsgr: ch/$(DATA_NAME).osrm $(PROFILE) $(OSRM_CONTRACT)
 corech/$(DATA_NAME).osrm.hsgr: corech/$(DATA_NAME).osrm $(PROFILE) $(OSRM_CONTRACT)
 	@echo "Running osrm-contract..."
 	$(TIMER) "osrm-contract\t$@" $(OSRM_CONTRACT) --core=0.5 $<
+
+street/street.osrm: $(PROFILE) $(OSRM_EXTRACT) $(OSRM_ELEVATION)
+	mkdir -p street
+	cp street.osm.pbf street/
+	$(TIMER) "osrm-elevation\t$@" $(OSRM_ELEVATION) street/street.osm.pbf --geotiff elevation/monaco_south.tif --geotiff elevation/monaco_north.tif
+	@echo "Running osrm-extract..."
+	$(TIMER) "osrm-extract\t$@" $(OSRM_EXTRACT) street/street.osm.pbf  -p $(PROFILE)
+
+street/street.osrm.hsgr: street/street.osrm $(OSRM_CONTRACT)
+	@echo "Running osrm-contract..."
+	$(TIMER) "osrm-contract\t$@" $(OSRM_CONTRACT) street/street.osrm
+
 
 mld/$(DATA_NAME).osrm.partition: mld/$(DATA_NAME).osrm $(PROFILE) $(OSRM_PARTITION)
 	@echo "Running osrm-partition..."

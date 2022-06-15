@@ -133,8 +133,7 @@ util::Coordinate CoordinateExtractor::ExtractRepresentativeCoordinate(
         return result;
     }
 
-    const util::Coordinate turn_coordinate =
-        node_coordinates[traversed_in_reverse ? to_node : intersection_node];
+    const util::Coordinate turn_coordinate = node_coordinates[traversed_in_reverse ? to_node : intersection_node];
 
     // Low priority roads are usually modelled very strangely. The roads are so small, though, that
     // our basic heuristic looking at the road should be fine.
@@ -144,8 +143,7 @@ util::Coordinate CoordinateExtractor::ExtractRepresentativeCoordinate(
         // very first part of the road. It's less accurate than searching for offsets but the models
         // contained in OSM are just to strange to capture fully. Using the fallback here we try to
         // do the best of what we can.
-        coordinates =
-            TrimCoordinatesToLength(std::move(coordinates), LOOKAHEAD_DISTANCE_WITHOUT_LANES);
+        coordinates = TrimCoordinatesToLength(std::move(coordinates), LOOKAHEAD_DISTANCE_WITHOUT_LANES);
         if (coordinates.size() > 2 && util::coordinate_calculation::haversineDistance(
                                           turn_coordinate, coordinates[1]) < ASSUMED_LANE_WIDTH)
         {

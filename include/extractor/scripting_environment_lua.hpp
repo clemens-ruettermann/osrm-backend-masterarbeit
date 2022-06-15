@@ -23,9 +23,13 @@ struct LuaScriptingContext final
 {
     LuaScriptingContext(const LocationDependentData &location_dependent_data)
         : location_dependent_data(location_dependent_data),
-          last_location_point(0., 180.) // assume (0,180) is invalid coordinate
+          last_location_point(0., 180.), // assume (0,180) is invalid coordinate
+		  car()
     {
     }
+
+	~LuaScriptingContext() {
+	}
 
     void ProcessNode(const osmium::Node &,
                      ExtractionNode &result,
@@ -34,6 +38,7 @@ struct LuaScriptingContext final
                     ExtractionWay &result,
                     const ExtractionRelationContainer &relations);
 
+	enav::Car car;
     ProfileProperties properties;
     RasterContainer raster_sources;
     sol::state state;
@@ -76,6 +81,7 @@ class Sol2ScriptingEnvironment final : public ScriptingEnvironment
     ~Sol2ScriptingEnvironment() override = default;
 
     const ProfileProperties &GetProfileProperties() override;
+    const enav::Car & GetCar() override;
 
     std::vector<std::vector<std::string>> GetExcludableClasses() override;
     std::vector<std::string> GetNameSuffixList() override;

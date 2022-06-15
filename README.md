@@ -1,5 +1,7 @@
 ## Open Source Routing Machine
 
+**WARNING: This version was changed to allow EV routing for Germany. As such normal profiles will not work and you need some additional files.**
+
 | Linux / macOS | Windows | Code Coverage |
 | ------------- | ------- | ------------- |
 | [![osrm-backend CI](https://github.com/Project-OSRM/osrm-backend/actions/workflows/osrm-backend.yml/badge.svg)](https://github.com/Project-OSRM/osrm-backend/actions/workflows/osrm-backend.yml) | [![AppVeyor](https://ci.appveyor.com/api/projects/status/4iuo3s9gxprmcjjh)](https://ci.appveyor.com/project/DennisOSRM/osrm-backend) | [![Codecov](https://codecov.io/gh/Project-OSRM/osrm-backend/branch/master/graph/badge.svg)](https://codecov.io/gh/Project-OSRM/osrm-backend) |
@@ -177,4 +179,46 @@ When using the code in a (scientific) publication, please cite
  publisher = {ACM},
  address = {New York, NY, USA},
 }
+```
+
+
+
+
+## EV-Routing
+Um die E-Auto Routenplanung nutzen zu können müssen die normalen OSRM Dateien vorbereitet werden.
+Hierbei ist darauf zu achten, dass die Profile angepasst werden müssen und der Ladesäulengraph erzeugt werden muss.
+
+Das Auto-Profil muss um einen Abschnitt erweitert werden, in welchem Eigenschaften des Autos konfiguriert werden (siehe auch die Datei `id3.lua`:
+```lua
+car = {
+    name                    = 'VW Id3',
+    wltp                    = 15.4,
+    base_weight             = 2000,
+    base_battery_capacity   = 58,
+    max_charging_power      = 100,
+    supported_plug_types    = { 
+        'Typ 2', 
+        'AC Kupplung Typ 2', 
+        'AC Steckdose Typ 2'
+    }
+}
+```
+
+### Ladesäulen-Datei
+Es wird die CSV-Datei der Bundesnetzagentur mit den Ladesäulen benötigt.
+Das Format ändert sich von Zeit zu Zeit, desshalb kann es notwendig sein, den Code zum Parsen der Datei anzupassen.
+Aktuell kann die CSV-Datei [hier](https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html) (https://www.bundesnetzagentur.de/DE/Fachthemen/ElektrizitaetundGas/E-Mobilitaet/start.html) heruntergeladen werden.
+
+### GeoTIFF-Dateien EU-DEM
+Für die Berechnung der Verbräuche werden die Höhendaten benötigt.
+Die aktuelle Implementierung verwendet den [EU-DEM Datensatz](https://land.copernicus.eu/imagery-in-situ/eu-dem/eu-dem-v1.1?tab=download) (https://land.copernicus.eu/imagery-in-situ/eu-dem/eu-dem-v1.1?tab=download  ein Account wird benötigt).
+
+### Vorbereiten der Daten
+Einfach der Reihe nach die folgenden Befehle ausführen:
+
+```bash
+./osrm-elevation <Pfad zur osm.pbf-Datei> --geotiff <Pfad zum GeoTiff>
+./osrm-extract <Pfad zur osm.pdf-Datei> -p <Pfad zum lua-Profil>
+./osrm-contract <Pfad zur osm.pdf-Datei>
+./osrm-charger-graph-builder <Pfad zur osm.pdf-Datei>
 ```

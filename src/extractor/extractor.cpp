@@ -201,6 +201,7 @@ std::vector<CompressedNodeBasedGraphEdge> toEdgeList(const util::NodeBasedDynami
  */
 int Extractor::run(ScriptingEnvironment &scripting_environment)
 {
+	TIMER_START(extraction_global);
     util::LogPolicy::GetInstance().Unmute();
 
     const unsigned recommended_num_threads = std::thread::hardware_concurrency();
@@ -233,6 +234,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
     std::vector<EdgeWeight> edge_based_node_weights;
     std::vector<EdgeDuration> edge_based_node_durations;
     std::vector<EdgeDistance> edge_based_node_distances;
+    std::vector<EdgeConsumption> edge_based_node_consumptions;
+
     std::uint32_t ebg_connectivity_checksum = 0;
 
     // Create a node-based graph from the OSRM file
@@ -301,6 +304,7 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
                                edge_based_node_weights,
                                edge_based_node_durations,
                                edge_based_node_distances,
+                               edge_based_node_consumptions,
                                edge_based_edge_list,
                                ebg_connectivity_checksum);
 
@@ -323,10 +327,11 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
 
     util::Log() << "Saving edge-based node weights to file.";
     TIMER_START(timer_write_node_weights);
-    extractor::files::writeEdgeBasedNodeWeightsDurationsDistances(config.GetPath(".osrm.enw"),
-                                                                  edge_based_node_weights,
-                                                                  edge_based_node_durations,
-                                                                  edge_based_node_distances);
+		extractor::files::writeEdgeBasedNodeWeightsDurationsDistancesConsumptions(config.GetPath(".osrm.enw"),
+		                                                                          edge_based_node_weights,
+		                                                                          edge_based_node_durations,
+		                                                                          edge_based_node_distances,
+		                                                                          edge_based_node_consumptions);
     TIMER_STOP(timer_write_node_weights);
     util::Log() << "Done writing. (" << TIMER_SEC(timer_write_node_weights) << ")";
 
@@ -365,6 +370,8 @@ int Extractor::run(ScriptingEnvironment &scripting_environment)
     util::Log() << "To prepare the data for routing, run: "
                 << "./osrm-contract " << config.GetPath(".osrm");
 
+	TIMER_STOP(extraction_global);
+	util::Log() << "extraction took " << TIMER_SEC(extraction_global) << "s";
     return 0;
 }
 
@@ -506,14 +513,17 @@ std::
     tbb::filter_t<ParsedBuffer, void> buffer_storage(
         tbb::filter::serial_in_order, [&](const ParsedBuffer &parsed_buffer) {
             number_of_nodes += parsed_buffer.resulting_nodes.size();
-            // put parsed objects thru extractor callbacks
+            // put parsed objects through extractor callbacks
             for (const auto &result : parsed_buffer.resulting_nodes)
             {
+
                 extractor_callbacks->ProcessNode(result.first, result.second);
             }
             number_of_ways += parsed_buffer.resulting_ways.size();
             for (const auto &result : parsed_buffer.resulting_ways)
             {
+	            const osmium::Way & a= result.first;
+	            ExtractionWay b = result.second;
                 extractor_callbacks->ProcessWay(result.first, result.second);
             }
 
@@ -616,8 +626,11 @@ std::
                               SOURCE_REF);
     }
 
+
+
     extraction_containers.PrepareData(scripting_environment,
                                       config.GetPath(".osrm").string(),
+                                      config.GetPath(".osrm.elevation").string(),
                                       config.GetPath(".osrm.names").string());
 
     auto profile_properties = scripting_environment.GetProfileProperties();
@@ -625,6 +638,7 @@ std::
     auto excludable_classes = scripting_environment.GetExcludableClasses();
     SetExcludableClasses(classes_map, excludable_classes, profile_properties);
     files::writeProfileProperties(config.GetPath(".osrm.properties").string(), profile_properties);
+	scripting_environment.GetCar().write_to_file(config.GetPath(".osrm.car.properties").string());
 
     TIMER_STOP(extracting);
     util::Log() << "extraction finished after " << TIMER_SEC(extracting) << "s";
@@ -716,6 +730,7 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     std::vector<EdgeWeight> &edge_based_node_weights,
     std::vector<EdgeDuration> &edge_based_node_durations,
     std::vector<EdgeDistance> &edge_based_node_distances,
+    std::vector<EdgeConsumption> &edge_based_node_consumptions,
     util::DeallocatingVector<EdgeBasedEdge> &edge_based_edge_list,
     std::uint32_t &connectivity_checksum)
 {
@@ -755,6 +770,7 @@ EdgeID Extractor::BuildEdgeExpandedGraph(
     edge_based_graph_factory.GetEdgeBasedNodeWeights(edge_based_node_weights);
     edge_based_graph_factory.GetEdgeBasedNodeDurations(edge_based_node_durations);
     edge_based_graph_factory.GetEdgeBasedNodeDistances(edge_based_node_distances);
+	edge_based_graph_factory.GetEdgeBasedNodeCosumptions(edge_based_node_consumptions);
     connectivity_checksum = edge_based_graph_factory.GetConnectivityChecksum();
 
     return number_of_edge_based_nodes;

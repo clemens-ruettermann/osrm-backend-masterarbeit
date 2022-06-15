@@ -161,14 +161,16 @@ int Partitioner::Run(const PartitionerConfig &config)
         std::vector<EdgeWeight> node_weights;
         std::vector<EdgeDuration> node_durations;
         std::vector<EdgeDuration> node_distances;
-        extractor::files::readEdgeBasedNodeWeightsDurations(
-            config.GetPath(".osrm.enw"), node_weights, node_durations);
+		std::vector<EdgeConsumption> node_consumptions;
+	    extractor::files::readEdgeBasedNodeWeightsDurationsConsumptions(
+			    config.GetPath(".osrm.enw"), node_weights, node_durations, node_consumptions);
         extractor::files::readEdgeBasedNodeDistances(config.GetPath(".osrm.enw"), node_distances);
         util::inplacePermutation(node_weights.begin(), node_weights.end(), permutation);
         util::inplacePermutation(node_durations.begin(), node_durations.end(), permutation);
         util::inplacePermutation(node_distances.begin(), node_distances.end(), permutation);
-        extractor::files::writeEdgeBasedNodeWeightsDurationsDistances(
-            config.GetPath(".osrm.enw"), node_weights, node_durations, node_distances);
+        util::inplacePermutation(node_consumptions.begin(), node_consumptions.end(), permutation);
+	    extractor::files::writeEdgeBasedNodeWeightsDurationsDistancesConsumptions(
+			    config.GetPath(".osrm.enw"), node_weights, node_durations, node_distances, node_consumptions);
     }
     {
         const auto &filename = config.GetPath(".osrm.maneuver_overrides");

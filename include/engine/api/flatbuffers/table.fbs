@@ -3,6 +3,7 @@ namespace osrm.engine.api.fbresult;
 
 table Table {
     durations: [float];
+    consumptions: [int];
     rows: ushort;
     cols: ushort;
     distances: [float];

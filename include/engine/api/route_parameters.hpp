@@ -76,7 +76,8 @@ struct RouteParameters : public BaseParameters
         Weight = 0x08,
         Datasources = 0x10,
         Speed = 0x20,
-        All = Duration | Nodes | Distance | Weight | Datasources | Speed
+		Consumption = 0x40,
+        All = Duration | Nodes | Distance | Weight | Datasources | Speed | Consumption
     };
 
     RouteParameters() = default;
@@ -92,10 +93,12 @@ struct RouteParameters : public BaseParameters
         // below.
         : BaseParameters{std::forward<Args>(args_)...}, steps{steps_}, alternatives{alternatives_},
           number_of_alternatives{alternatives_ ? 1u : 0u}, annotations{false},
-          annotations_type{AnnotationsType::None}, geometries{geometries_}, overview{overview_},
+          annotations_type{AnnotationsType::All}, geometries{geometries_}, overview{overview_},
           continue_straight{continue_straight_}, waypoints()
     {
     }
+
+
 
     // RouteParameters constructor adding the `annotations` setting in a API-compatible way.
     template <typename... Args>
@@ -174,7 +177,7 @@ struct RouteParameters : public BaseParameters
     unsigned number_of_alternatives = 0;
     bool annotations = false;
     AnnotationsType annotations_type = AnnotationsType::None;
-    GeometriesType geometries = GeometriesType::Polyline;
+    GeometriesType geometries = GeometriesType::GeoJSON;
     OverviewType overview = OverviewType::Simplified;
     boost::optional<bool> continue_straight;
     std::vector<std::size_t> waypoints;

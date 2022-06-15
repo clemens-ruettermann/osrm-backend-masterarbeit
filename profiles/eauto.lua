@@ -29,6 +29,19 @@ function setup()
       traffic_light_penalty          = 2,
     },
 
+    car = {
+        name                    = 'VW Id4',
+        wltp                    = 18.3,
+        base_weight             = 2124,
+        passenger_weight        = 100,
+        base_battery_capacity   = 77,
+    	supported_plug_types	= {
+	    	'Typ 2',
+		    'AC Kupplung Typ 2',
+		    'AC Steckdose Typ 2'
+	    }
+    },
+
     default_mode              = mode.driving,
     default_speed             = 10,
     oneway_handling           = true,

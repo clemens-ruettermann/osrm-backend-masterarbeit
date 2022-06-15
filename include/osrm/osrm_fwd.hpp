@@ -55,6 +55,7 @@ struct TileParameters;
 } // namespace api
 
 class EngineInterface;
+class ChargerGraph;
 struct EngineConfig;
 } // namespace engine
 } // namespace osrm

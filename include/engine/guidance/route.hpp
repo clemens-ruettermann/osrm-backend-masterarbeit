@@ -1,6 +1,8 @@
 #ifndef ROUTE_HPP
 #define ROUTE_HPP
 
+#include <cstdint>
+
 namespace osrm
 {
 namespace engine
@@ -12,6 +14,7 @@ struct Route
 {
     double distance;
     double duration;
+	std::int32_t consumption;
     double weight;
 };
 } // namespace guidance

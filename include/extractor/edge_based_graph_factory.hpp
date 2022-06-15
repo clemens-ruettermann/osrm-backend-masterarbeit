@@ -92,6 +92,7 @@ class EdgeBasedGraphFactory
     void GetEdgeBasedNodeWeights(std::vector<EdgeWeight> &output_node_weights);
     void GetEdgeBasedNodeDurations(std::vector<EdgeWeight> &output_node_durations);
     void GetEdgeBasedNodeDistances(std::vector<EdgeDistance> &output_node_distances);
+    void GetEdgeBasedNodeCosumptions(std::vector<EdgeConsumption> &output_node_consumptions);
     std::uint32_t GetConnectivityChecksum() const;
 
     std::uint64_t GetNumberOfEdgeBasedNodes() const;
@@ -116,6 +117,7 @@ class EdgeBasedGraphFactory
     std::vector<EdgeWeight> m_edge_based_node_weights;
     std::vector<EdgeDuration> m_edge_based_node_durations;
     std::vector<EdgeDistance> m_edge_based_node_distances;
+    std::vector<EdgeConsumption> m_edge_based_node_consumption;
 
     //! list of edge based nodes (compressed segments)
     std::vector<EdgeBasedNodeSegment> m_edge_based_node_segments;

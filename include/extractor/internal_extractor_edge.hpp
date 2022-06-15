@@ -56,24 +56,13 @@ struct InternalExtractorEdge
     using WeightData = detail::ByEdgeOrByMeterValue;
     using DurationData = detail::ByEdgeOrByMeterValue;
 
-    explicit InternalExtractorEdge() : weight_data(), duration_data() {}
-
-    explicit InternalExtractorEdge(OSMNodeID source,
-                                   OSMNodeID target,
-                                   WeightData weight_data,
-                                   DurationData duration_data,
-                                   util::Coordinate source_coordinate)
-        : result(source, target, 0, 0, 0, {}, -1, {}), weight_data(std::move(weight_data)),
-          duration_data(std::move(duration_data)), source_coordinate(std::move(source_coordinate))
-    {
-    }
-
     explicit InternalExtractorEdge(NodeBasedEdgeWithOSM edge,
                                    WeightData weight_data,
                                    DurationData duration_data,
+                                   double speed,
                                    util::Coordinate source_coordinate)
         : result(std::move(edge)), weight_data(weight_data), duration_data(duration_data),
-          source_coordinate(source_coordinate)
+          source_coordinate(source_coordinate), speed(std::move(speed))
     {
     }
 
@@ -85,6 +74,8 @@ struct InternalExtractorEdge
     DurationData duration_data;
     // coordinate of the source node
     util::Coordinate source_coordinate;
+	float source_elevation;
+	double speed;
 };
 } // namespace extractor
 } // namespace osrm
